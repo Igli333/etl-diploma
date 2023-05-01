@@ -6,22 +6,26 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="coordinator" />
         <module name="auth" />
         <module name="gateway" />
-        <module name="coordinator" />
+        <module name="loader" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="amigosservices" target="17" />
       <module name="bom" target="1.5" />
       <module name="etl-diploma" target="1.5" />
+      <module name="extractor" target="17" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="auth" options="-parameters" />
       <module name="coordinator" options="-parameters" />
+      <module name="extractor" options="-parameters" />
       <module name="gateway" options="-parameters" />
+      <module name="loader" options="-parameters" />
     </option>
   </component>
 </project>
