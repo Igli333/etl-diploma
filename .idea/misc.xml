@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="FrameworkDetectionExcludesConfiguration">
+    <file type="web" url="file://$PROJECT_DIR$/ms-merger" />
+  </component>
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
@@ -11,12 +14,12 @@
         <option value="$PROJECT_DIR$/ms-extracter/pom.xml" />
         <option value="$PROJECT_DIR$/ms-loader/pom.xml" />
         <option value="$PROJECT_DIR$/ms-extractor/pom.xml" />
+        <option value="$PROJECT_DIR$/ms-filter/pom.xml" />
+        <option value="$PROJECT_DIR$/ms-sorter/pom.xml" />
+        <option value="$PROJECT_DIR$/ms-joiner/pom.xml" />
+        <option value="$PROJECT_DIR$/ms-aggregator/pom.xml" />
+        <option value="$PROJECT_DIR$/ms-merger/pom.xml" />
       </list>
-    </option>
-    <option name="ignoredFiles">
-      <set>
-        <option value="$PROJECT_DIR$/ms-extractor/pom.xml" />
-      </set>
     </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="17" project-jdk-type="JavaSDK" />

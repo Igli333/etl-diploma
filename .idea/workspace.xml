@@ -7,13 +7,37 @@
     <list default="true" id="689d11fb-2905-4f34-a4cf-66035f464d30" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-auth/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-auth/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-coordinator/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-coordinator/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-extractor/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-extractor/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-gateway/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-gateway/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-loader/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-loader/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$/ms-merger">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <projects_view>
+          <tree_state>
+            <expand />
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -40,6 +64,7 @@
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
@@ -49,6 +74,11 @@
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "run.code.analysis.last.selected.profile": "pProject Default",
     "settings.editor.selected.configurable": "reference.settings.project.maven.importing",
     "spring.configuration.checksum": "2a3abc0541b7475ef7d6860faeae5556",
     "vue.rearranger.settings.migration": "true"
@@ -75,6 +105,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="MsAggregatorApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="aggregator" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.aggregator.MsAggregatorApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="MsAuthApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="auth" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.auth.MsAuthApplication" />
@@ -96,6 +133,20 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="MsExtractorApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="extractor" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.extractor.MsExtractorApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="MsFilterApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="filter" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.filter.MsFilterApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="MsGatewayApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="gateway" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.gateway.MsGatewayApplication" />
@@ -103,9 +154,30 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="MsJoinerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="joiner" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.joiner.MsJoinerApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="MsLoaderApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="loader" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.loader.MsLoaderApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="MsMergerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="merger" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.merger.MsMergerApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="MsSorterApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="sorter" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.diplome.sorter.MsSorterApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -126,7 +198,7 @@
       <workItem from="1681159476796" duration="727000" />
       <workItem from="1681160218807" duration="107000" />
       <workItem from="1682153071789" duration="851000" />
-      <workItem from="1682963574589" duration="932000" />
+      <workItem from="1682963574589" duration="3215000" />
     </task>
     <servers />
   </component>
