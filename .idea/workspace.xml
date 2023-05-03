@@ -7,14 +7,8 @@
     <list default="true" id="689d11fb-2905-4f34-a4cf-66035f464d30" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ms-auth/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-auth/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ms-coordinator/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-coordinator/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ms-extractor/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-extractor/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ms-gateway/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-gateway/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ms-loader/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-loader/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -80,7 +74,7 @@
     "project.structure.side.proportion": "0.0",
     "run.code.analysis.last.selected.profile": "pProject Default",
     "settings.editor.selected.configurable": "reference.settings.project.maven.importing",
-    "spring.configuration.checksum": "2a3abc0541b7475ef7d6860faeae5556",
+    "spring.configuration.checksum": "4d7d7bda2bdb34f25582df4a8b16c5ac",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -198,7 +192,9 @@
       <workItem from="1681159476796" duration="727000" />
       <workItem from="1681160218807" duration="107000" />
       <workItem from="1682153071789" duration="851000" />
-      <workItem from="1682963574589" duration="3215000" />
+      <workItem from="1682963574589" duration="3524000" />
+      <workItem from="1682967204117" duration="197000" />
+      <workItem from="1683141274643" duration="527000" />
     </task>
     <servers />
   </component>

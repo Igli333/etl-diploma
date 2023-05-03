@@ -19,6 +19,7 @@
         <option value="$PROJECT_DIR$/ms-joiner/pom.xml" />
         <option value="$PROJECT_DIR$/ms-aggregator/pom.xml" />
         <option value="$PROJECT_DIR$/ms-merger/pom.xml" />
+        <option value="$PROJECT_DIR$/lib-shared/pom.xml" />
       </list>
     </option>
   </component>

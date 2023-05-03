@@ -8,6 +8,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="filter" />
+        <module name="shared" />
         <module name="coordinator" />
         <module name="sorter" />
         <module name="auth" />
@@ -29,16 +30,17 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="aggregator" options="-parameters" />
+      <module name="aggregator" options="" />
       <module name="auth" options="" />
       <module name="coordinator" options="" />
       <module name="extractor" options="" />
       <module name="filter" options="" />
       <module name="gateway" options="" />
-      <module name="joiner" options="-parameters" />
+      <module name="joiner" options="" />
       <module name="loader" options="" />
-      <module name="merger" options="-parameters" />
-      <module name="sorter" options="-parameters" />
+      <module name="merger" options="" />
+      <module name="shared" options="-parameters" />
+      <module name="sorter" options="" />
     </option>
   </component>
 </project>
