@@ -1,10 +1,7 @@
 package com.diplome.shared.enums;
 
 public enum Transformations {
-    FILTER("Filter"),
-    JOINER("Joiner"),
-    MERGER("Merger"),
-    SORTER("Sorter");
+    FILTER("Filter"), JOINER("Joiner"), MERGER("Merger"), SORTER("Sorter");
 
     private final String name;
 
