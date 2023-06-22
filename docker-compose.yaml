@@ -2,7 +2,7 @@ version: '3.8'
 services:
   zookeeper:
     container_name: etl-zookeeper
-    image: wurstmeister/zookeeper:latest
+    image: confluentinc/cp-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -11,7 +11,7 @@ services:
 
   kafka:
     container_name: etl-kafka-broker
-    image: wurstmeister/kafka:latest
+    image: confluentinc/cp-kafka
     depends_on:
       - zookeeper
     ports:
@@ -20,20 +20,25 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   postgresql:
     container_name: etl-postgres
-    image: postgres:latest
+    image: postgres:alpine
     environment:
-      POSTGRAS_USER: igliballa
+      POSTGRES_DB: etl
+      POSTGRES_USER: igliballa
       POSTGRES_PASSWORD: password
       PGDATA: data/postgres
     volumes:
-      - postgres:/data/postgres
+      - postgresql:/data/postgres
     ports:
-      - "5434:5434"
+      - "5432:5432"
     networks:
-      - postgres
+      - postgresql
 
   mongodb:
     container_name: etl-mongo
@@ -50,11 +55,11 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres:
+  postgresql:
   mongo:
 
 networks:
-  postgres:
+  postgresql:
     driver: bridge
   mongo:
     driver: bridge
