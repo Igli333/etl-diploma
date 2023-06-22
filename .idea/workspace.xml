@@ -5,9 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="689d11fb-2905-4f34-a4cf-66035f464d30" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/docker-compose.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/jpa-buddy.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/elements/Source.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/elements/Target.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/elements/Transformation.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/entities/User.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/entities/Workflow.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/enums/Transformations.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/repositories/UserRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib-shared/src/main/java/com/diplome/shared/repositories/WorkflowRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib-shared/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/lib-shared/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,8 +43,31 @@
       </state>
     </system>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Record" />
+        <option value="Enum" />
+        <option value="Class" />
+        <option value="Interface" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="7868458d-bbe4-4c45-9de6-1a709077aeef" />
+        <option name="url" value="https://github.com/Igli333/etl-diploma.git" />
+      </UrlAndAccount>
+    </option>
   </component>
   <component name="KubernetesApiPersistence">
     <option name="context" value="minikube" />
@@ -66,7 +101,7 @@
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
     "jdk.selected.JAVA_MODULE": "17",
-    "last_opened_file_path": "C:/Users/iglib/Documents/School/Universitet/Viti III/Diploma/etl-diploma",
+    "last_opened_file_path": "/home/ballai/Documents/academia/diploma/etl-diploma",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -76,7 +111,7 @@
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.0",
     "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "preferences.customizations",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "spring.configuration.checksum": "15f80fd7480eb13a1b673b580426269c",
     "vue.rearranger.settings.migration": "true"
   }
@@ -88,7 +123,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Spring Boot.MsGatewayApplication">
+  <component name="RunManager">
     <configuration default="true" type="JetRunConfigurationType">
       <module name="bom" />
       <method v="2">
