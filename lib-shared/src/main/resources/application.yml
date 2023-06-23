@@ -1,1 +1,5 @@
-
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/etl
+    username: igliballa
+    password: password

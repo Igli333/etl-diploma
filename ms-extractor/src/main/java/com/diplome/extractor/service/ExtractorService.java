@@ -4,17 +4,23 @@ import com.diplome.shared.elements.Source;
 import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.DatabaseDrivers;
 import com.diplome.shared.repositories.WorkflowRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ExtractorService {
 
+    @Autowired
+    private DataSource dataSource;
+
+    @Autowired
     private WorkflowRepository workflowRepository;
+
 
     private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
         String databaseType = source.databaseType();
@@ -26,14 +32,39 @@ public class ExtractorService {
 
     public void addDatabaseTableLocally(Source source) throws SQLException, ClassNotFoundException {
         try (Connection connection = connectToSourceDatabase(source)) {
+            String tableName = source.tableName();
             String useDatabase = "USE DATABASE " + source.name() + ";";
-            String getTable = "SELECT * FROM " + source.tableName() + ";";
+            String getTable = "SELECT * FROM " + tableName + ";";
 
             Statement sqlCall = connection.createStatement();
             ResultSet useDb = sqlCall.executeQuery(useDatabase);
             ResultSet getTbl = sqlCall.executeQuery(getTable);
 
             // Creating table in local repository database ...
+
+
+            ResultSetMetaData resultSetMetaData = getTbl.getMetaData();
+            int columnCount = resultSetMetaData.getColumnCount();
+            List<String> columns = new ArrayList<>(columnCount);
+            List<String> columnsTypes = new ArrayList<>(columnCount);
+
+            for (int i = 1; i <= columnCount; i++) {
+                columns.add(i, resultSetMetaData.getColumnClassName(i));
+                columnsTypes.add(i, resultSetMetaData.getColumnTypeName(i));
+            }
+
+            String createTable = "CREATE TABLE " + tableName + " (";
+
+            String insertNewTable = "INSERT INTO " + source.tableName() + "(";
+
+            for (String column : columns) {
+                insertNewTable += column + ", ";
+            }
+
+            insertNewTable += ") VALUES(";
+
+
+            Connection etlDb = dataSource.getConnection();
         }
     }
 
