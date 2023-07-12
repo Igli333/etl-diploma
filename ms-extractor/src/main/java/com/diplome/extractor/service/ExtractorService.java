@@ -53,15 +53,23 @@ public class ExtractorService {
                 columnsTypes.add(i, resultSetMetaData.getColumnTypeName(i));
             }
 
-            String createTable = "CREATE TABLE " + tableName + " (";
+            StringBuilder createTable = new StringBuilder("CREATE TABLE " + tableName + " (");
 
-            String insertNewTable = "INSERT INTO " + source.tableName() + "(";
-
-            for (String column : columns) {
-                insertNewTable += column + ", ";
+            int i = 0;
+            for (String column : columns){
+                createTable.append(column).append(" ").append(columnsTypes.get(i)).append(", ");
+                i++;
             }
 
-            insertNewTable += ") VALUES(";
+            createTable.append(");");
+
+            StringBuilder insertNewTable = new StringBuilder("INSERT INTO " + source.tableName() + "(");
+
+            for (String column : columns) {
+                insertNewTable.append(column).append(", ");
+            }
+
+            insertNewTable.append(") VALUES(");
 
 
             Connection etlDb = dataSource.getConnection();
