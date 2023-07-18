@@ -4,6 +4,7 @@ import com.diplome.shared.elements.Source;
 import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.DatabaseDrivers;
 import com.diplome.shared.repositories.WorkflowRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,14 +14,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ExtractorService {
 
-    @Autowired
     private DataSource dataSource;
-
-    @Autowired
     private WorkflowRepository workflowRepository;
 
+
+    public ExtractorService(DataSource dataSource, WorkflowRepository workflowRepository) {
+        this.dataSource = dataSource;
+        this.workflowRepository = workflowRepository;
+    }
 
     private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
         String databaseType = source.databaseType();
