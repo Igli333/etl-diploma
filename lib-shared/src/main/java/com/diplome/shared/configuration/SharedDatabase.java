@@ -15,7 +15,7 @@ public class SharedDatabase {
 
     @Bean
     public DataSource etlDatabase(){
-        DataSourceBuilder dataSourceBuilder =  DataSourceBuilder.create();
+        DataSourceBuilder<?> dataSourceBuilder =  DataSourceBuilder.create();
         return dataSourceBuilder.build();
     }
 }
