@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
-import java.util.stream.Stream;
-
 @RestController
 @RequestMapping("etl")
 @RequiredArgsConstructor
@@ -19,9 +17,9 @@ public class EtlController {
     private final WorkflowService workflowService;
 
     @PostMapping("/init")
-    public Flux<String> initializeWorkflow(@RequestBody WorkflowDto workflow){
-        Flux<String> dataStream = Flux.fromStream(() -> Stream.generate(()));
-        return dataStream;
+    public Flux<String> initializeWorkflow(@RequestBody WorkflowDto workflow) {
+        return workflowService.startWorkflow(workflow);
+
     }
 
 }
