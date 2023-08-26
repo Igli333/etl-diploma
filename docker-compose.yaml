@@ -44,8 +44,6 @@ services:
     container_name: etl-mongo
     image: mongo
     environment:
-      MONGO_INITDB_ROOT_USERNAME: igliballa
-      MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: etl
     ports:
       - "27017:27017"

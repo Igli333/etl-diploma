@@ -14,12 +14,12 @@ import java.util.List;
 
 @Getter
 @Setter
-@Document
+@Document(collection = "workflows")
 @NoArgsConstructor
 @AllArgsConstructor
 public class Workflow {
     @Id
-    private Integer id;
+    private String id;
     private String workflowName;
     private Source source;
     private Target target;

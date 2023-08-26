@@ -1,11 +1,12 @@
 package com.diplome.shared.enums;
 
+import java.util.Arrays;
+import java.util.List;
+
 public enum Transformations {
-    FILTER("Filter"), JOINER("Joiner"), MERGER("Merger"), SORTER("Sorter");
+    EXTRACTOR, FILTER, JOINER, MERGER, SORTER, LOADER;
 
-    private final String name;
-
-    Transformations(final String name) {
-        this.name = name;
+    public static List<String> list() {
+        return Arrays.stream(values()).map(Enum::name).toList();
     }
 }

@@ -7,6 +7,7 @@ import com.diplome.shared.elements.Transformation;
 import java.util.List;
 
 public class WorkflowDto {
+
     private String workflowName;
     private Source source;
     private Target target;

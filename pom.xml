@@ -21,6 +21,7 @@
     <modules>
         <module>lib-shared</module>
         <module>ms-extractor</module>
+        <module>ms-coordinator</module>
     </modules>
 
     <dependencyManagement>

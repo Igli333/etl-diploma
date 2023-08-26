@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
-@SpringBootApplication(scanBasePackages={"com.diplome.shared.configuration"})
+@SpringBootApplication(scanBasePackages={"com.diplome.shared.configuration", "com.diplome.coordinator"})
 @EnableMongoRepositories(basePackages = {"com.diplome.shared.repositories"})
 public class MsCoordinatorApplication {
 
