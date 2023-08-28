@@ -1,4 +1,4 @@
 package com.diplome.shared.elements;
 
-public record TransformationResponse(Integer workflowId, String message, String error) {
+public record TransformationResponse(String workflowId, String message, String error) {
 }

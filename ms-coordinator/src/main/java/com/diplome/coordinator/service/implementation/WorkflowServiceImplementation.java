@@ -9,6 +9,8 @@ import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeMap;
+import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -27,16 +29,19 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
     private final WorkflowRepository workflowRepository;
     private final ModelMapper modelMapper;
-
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final Sinks.Many<TransformationResponse> messageSink = Sinks.many().replay().latest();
     private final Map<String, Queue<Transformation>> executingWorkflows = new ConcurrentHashMap<>();
 
     public Flux<String> startWorkflow(WorkflowDto workflowDto) {
-        Workflow workflow = workflowRepository.save(dtoToEntity(workflowDto));
-        String workflowId = workflow.getId();
+        Workflow workflow = dtoToEntity(workflowDto);
+        workflowRepository.save(workflow);
 
+        String workflowId = workflow.getId();
         executingWorkflows.put(workflowId, new LinkedList<>(workflow.getTransformations()));
+
+        sendMessage(Transformations.EXTRACTOR, workflowId);
+
         return getUpdatesFromWorkflow(workflowId);
     }
 
@@ -44,13 +49,20 @@ public class WorkflowServiceImplementation implements WorkflowService {
     public void endOfTransformation(TransformationResponse transformationResponse) {
         messageSink.tryEmitNext(transformationResponse);
 
-        if (transformationResponse.error().isEmpty()) {
-            Integer workflowId = transformationResponse.workflowId();
-            Transformation nextTransformation = executingWorkflows.get(workflowId).poll();
-            if (nextTransformation == null) {
-                return;
+        if (transformationResponse.error().isEmpty() || !transformationResponse.message()
+                .equals("Loader for workflow: " + transformationResponse.workflowId() + " finished")) {
+            Transformations transformation;
+            String workflowId = transformationResponse.workflowId();
+            Queue<Transformation> transformationQueue = executingWorkflows.get(workflowId);
+
+            if (transformationQueue == null || transformationQueue.isEmpty()) {
+                transformation = Transformations.LOADER;
+            } else {
+                Transformation nextTransformation = transformationQueue.poll();
+                transformation = nextTransformation.name();
             }
-            this.sendMessage(Transformations.valueOf(nextTransformation.name().name()), String.valueOf(workflowId));
+
+            this.sendMessage(transformation, String.valueOf(workflowId));
         }
     }
 
@@ -69,6 +81,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
 
     private Workflow dtoToEntity(WorkflowDto workflowDto) {
+        this.modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         return modelMapper.map(workflowDto, Workflow.class);
     }
 

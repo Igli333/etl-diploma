@@ -6,6 +6,9 @@ import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.DatabaseDrivers;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.Level;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +19,7 @@ import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Log4j2
 public class ExtractorServiceImplementation implements ExtractorService {
 
     final private DataSource dataSource;
@@ -30,7 +34,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return DriverManager.getConnection(URI, source.username(), source.password());
     }
 
-    public void addDatabaseTableLocally(Integer workflowId) {
+    public void addDatabaseTableLocally(String workflowId) {
         Source source = getWorkflowInformation(workflowId);
         try (Connection connection = connectToSourceDatabase(source)) {
             String tableName = source.tableName();
@@ -63,9 +67,9 @@ public class ExtractorServiceImplementation implements ExtractorService {
                 }
             }
 
-            kafkaTemplate.send("workflow", workflowId.toString());
+            kafkaTemplate.send("workflow", workflowId);
         } catch (SQLException | ClassNotFoundException e){
-            e.printStackTrace();
+            log.log(Level.ERROR, e);
         }
     }
 
@@ -113,7 +117,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return insertions;
     }
 
-    private Source getWorkflowInformation(Integer id) {
+    private Source getWorkflowInformation(String id) {
         Workflow wf = workflowRepository.findWorkflowById(id);
         return wf.getSource();
     }

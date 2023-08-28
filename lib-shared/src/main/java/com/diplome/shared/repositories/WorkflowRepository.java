@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.repository.Query;
 
 public interface WorkflowRepository extends MongoRepository<Workflow, String> {
     @Query("{'id': ?0}")
-    Workflow findWorkflowById(Integer id);
+    Workflow findWorkflowById(String id);
 }
