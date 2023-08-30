@@ -14,7 +14,7 @@ public class KafkaConsumer {
 
     private final ExtractorServiceImplementation extractorServiceImplementation;
 
-    @KafkaListener(topics = TOPIC, groupId = "group-id")
+    @KafkaListener(topics = TOPIC, groupId = "group-id", concurrency = "3")
     private void listen(String workflowId){
         extractorServiceImplementation.addDatabaseTableLocally(workflowId);
     }

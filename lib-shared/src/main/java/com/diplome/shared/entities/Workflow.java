@@ -23,11 +23,11 @@ public class Workflow {
     @Field("workflowName")
     private String workflowName;
 
-    @Field("source")
-    private Source source;
+    @Field("sources")
+    private List<Source> sources;
 
-    @Field("target")
-    private Target target;
+    @Field("targets")
+    private List<Target> targets;
 
     @Field("transformations")
     private List<Transformation> transformations;

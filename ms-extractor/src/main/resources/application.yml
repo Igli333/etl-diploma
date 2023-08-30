@@ -7,6 +7,8 @@ spring:
     username: igliballa
     password: password
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
   data:
     mongodb:
       database: etl

@@ -6,6 +6,7 @@ import com.diplome.shared.elements.Transformation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.List;
 
@@ -16,11 +17,11 @@ public class WorkflowDto {
     @JsonProperty("workflowName")
     private String workflowName;
 
-    @JsonProperty("source")
-    private Source source;
+    @JsonProperty("sources")
+    private List<Source> sources;
 
-    @JsonProperty("target")
-    private Target target;
+    @JsonProperty("targets")
+    private List<Target> targets;
 
     @JsonProperty("transformations")
     private List<Transformation> transformations;

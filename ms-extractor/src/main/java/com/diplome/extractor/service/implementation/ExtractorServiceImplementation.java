@@ -6,7 +6,6 @@ import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.DatabaseDrivers;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.AllArgsConstructor;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -35,7 +34,6 @@ public class ExtractorServiceImplementation implements ExtractorService {
     }
 
     public void addDatabaseTableLocally(String workflowId) {
-        Source source = getWorkflowInformation(workflowId);
         try (Connection connection = connectToSourceDatabase(source)) {
             String tableName = source.tableName();
 
@@ -66,11 +64,11 @@ public class ExtractorServiceImplementation implements ExtractorService {
                     localDBStatement.executeQuery(insertion);
                 }
             }
-
             kafkaTemplate.send("workflow", workflowId);
-        } catch (SQLException | ClassNotFoundException e){
+        } catch (SQLException | ClassNotFoundException e) {
             log.log(Level.ERROR, e);
         }
+
     }
 
     private String createTable(Connection connection, String tableName, List<String> columns, List<String> columnsTypes, int columnCount) throws SQLException {
@@ -117,8 +115,8 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return insertions;
     }
 
-    private Source getWorkflowInformation(String id) {
+    private List<Source> getWorkflowInformation(String id) {
         Workflow wf = workflowRepository.findWorkflowById(id);
-        return wf.getSource();
+        return wf.getSources();
     }
 }
