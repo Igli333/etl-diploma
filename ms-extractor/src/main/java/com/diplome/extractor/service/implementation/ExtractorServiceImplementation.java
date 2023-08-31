@@ -2,8 +2,11 @@ package com.diplome.extractor.service.implementation;
 
 import com.diplome.extractor.service.ExtractorService;
 import com.diplome.shared.elements.Source;
+import com.diplome.shared.elements.TransformationRequest;
+import com.diplome.shared.elements.TransformationResponse;
 import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.DatabaseDrivers;
+import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -15,6 +18,7 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -23,7 +27,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
 
     final private DataSource dataSource;
     final private WorkflowRepository workflowRepository;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<String, TransformationResponse> kafkaTemplate;
 
     private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
         String databaseType = source.databaseType();
@@ -33,7 +37,16 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return DriverManager.getConnection(URI, source.username(), source.password());
     }
 
-    public void addDatabaseTableLocally(String workflowId) {
+    @Override
+    public void addDatabaseTableLocally(TransformationRequest transformationRequest) {
+        String workflowId = transformationRequest.workFlowId();
+        Workflow workflow = workflowRepository.findWorkflowById(workflowId);
+
+        Source source = workflow.getSources().stream()
+                .filter(src -> src.name().equals(transformationRequest.parameters().get("referenceSource"))).toList().get(0);
+
+        TransformationResponse response = null;
+
         try (Connection connection = connectToSourceDatabase(source)) {
             String tableName = source.tableName();
 
@@ -64,11 +77,20 @@ public class ExtractorServiceImplementation implements ExtractorService {
                     localDBStatement.executeQuery(insertion);
                 }
             }
-            kafkaTemplate.send("workflow", workflowId);
+
+            response = new TransformationResponse(workflowId, "",
+                    "Extraction for " + workflow.getWorkflowName() + " source: " + source.name() + " finished",
+                    null);
+
         } catch (SQLException | ClassNotFoundException e) {
             log.log(Level.ERROR, e);
+            response = new TransformationResponse(workflowId,
+                    "", null,
+                    "Extraction for \" + workflow.getWorkflowName() + \" source: \" +  source.name() + \" failed");
+
         }
 
+        kafkaTemplate.send(Transformations.EXTRACTOR.name(), response);
     }
 
     private String createTable(Connection connection, String tableName, List<String> columns, List<String> columnsTypes, int columnCount) throws SQLException {
@@ -115,8 +137,4 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return insertions;
     }
 
-    private List<Source> getWorkflowInformation(String id) {
-        Workflow wf = workflowRepository.findWorkflowById(id);
-        return wf.getSources();
-    }
 }

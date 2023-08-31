@@ -2,7 +2,6 @@ package com.diplome.coordinator.service.implementation;
 
 import com.diplome.coordinator.service.WorkflowService;
 import com.diplome.shared.dto.WorkflowDto;
-import com.diplome.shared.elements.Source;
 import com.diplome.shared.elements.Transformation;
 import com.diplome.shared.elements.TransformationRequest;
 import com.diplome.shared.elements.TransformationResponse;
@@ -11,7 +10,6 @@ import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeMap;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -56,8 +54,15 @@ public class WorkflowServiceImplementation implements WorkflowService {
             sendMessage(Transformations.EXTRACTOR, transformationRequest);
         });
 
-        if(transformations.stream().anyMatch(transformation -> transformation.name().equals(Transformations.JOINER))) {
-            Queue
+        List<Transformation> compositeTransformations = transformations.stream().filter(transformation -> transformation.name().equals(Transformations.JOINER) || transformation.name().equals(Transformations.MERGER)).toList();
+
+        if (!compositeTransformations.isEmpty()) {
+            compositeTransformations.forEach(compositeTransformation -> {
+                Queue<Transformation> afterJoin = transformations.stream()
+                        .filter(transformation -> transformation.parameters().get("source").equals(compositeTransformation.name().name()))
+                        .collect(Collectors.toCollection(LinkedList::new));
+                executingWorkflows.put(workflowId + "-" + compositeTransformation.name(), afterJoin);
+            });
         }
 
         return getUpdatesFromWorkflow(workflowId);
@@ -67,33 +72,40 @@ public class WorkflowServiceImplementation implements WorkflowService {
     public void endOfTransformation(TransformationResponse transformationResponse) {
         messageSink.tryEmitNext(transformationResponse);
 
+        if (transformationResponse.error() != null) {
+            return;
+        }
+
         String workflowId = transformationResponse.workflowId();
         if (transformationResponse.error().isEmpty() || !transformationResponse.message()
                 .equals("Loader for workflow: " + workflowId + " finished")) {
-            Transformations transformation;
+            Transformations nextTransformation;
             String workflowSourceCompositeKey = workflowId.substring(workflowId.indexOf("-"));
             Queue<Transformation> transformationQueue = executingWorkflows.get(workflowSourceCompositeKey);
 
-            // You have to check if a JOIN of a MERGE has happened
-            // Create a new Queue workflowId-JoinOrMergeResultReference
-            // Continue with that as the main workflow
-            // For testing purposes, a few branches can merge, but they cannot split
-            // Unless it is in the loading stage, which can be done for many target db
             if (transformationQueue == null || transformationQueue.isEmpty()) {
-                transformation = Transformations.LOADER;
+                if (transformationResponse.message().contains("Joiner") || transformationResponse.message().contains("Merger")) {
+                    Queue<Transformation> newLineOfExecution = executingWorkflows.get(workflowId + "-" + transformationResponse.finishedTransformationName());
+                    if (!newLineOfExecution.isEmpty()) {
+                        nextTransformation = newLineOfExecution.poll().name();
+                    } else {
+                        nextTransformation = Transformations.LOADER;
+                    }
+                } else {
+                    nextTransformation = Transformations.LOADER;
+                }
             } else {
-                Transformation nextTransformation = transformationQueue.poll();
-                transformation = nextTransformation.name();
+                nextTransformation = transformationQueue.poll().name();
             }
 
-            this.sendMessage(transformation, new TransformationRequest(workflowId, new HashMap<>()));
+            this.sendMessage(nextTransformation, new TransformationRequest(workflowId, new HashMap<>()));
         }
     }
 
     private Flux<String> getUpdatesFromWorkflow(String workflowId) {
         return messageSink.asFlux()
                 .filter(message -> !Objects.equals(message.workflowId(), workflowId))
-                .takeUntil(message -> message.message().equals("Loader for workflow: " + workflowId + " finished"))
+                .takeUntil(message -> message.message().equals("Loader for workflow: " + workflowId + " finished") || message.error() != null)
                 .map(message -> {
                     if (!message.error().isEmpty()) {
                         return message.error();
@@ -102,7 +114,6 @@ public class WorkflowServiceImplementation implements WorkflowService {
                     }
                 });
     }
-
 
     private Workflow dtoToEntity(WorkflowDto workflowDto) {
         this.modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
