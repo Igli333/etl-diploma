@@ -3,7 +3,13 @@ spring:
     url: jdbc:postgresql://localhost:5432/etl
     username: igliballa
     password: password
-    driver-class-name: org.postgresql.Driver
+    driver-class-name:
+    hikari:
+      driver-class-name: org.postgresql.Driver
+      jdbc-url: jdbc:postgresql://localhost:5432/etl
+      connectionTimeout: 30000
+      maximumPoolSize: 10
+      minimumIdle: 2
   data:
     mongodb:
       database: etl

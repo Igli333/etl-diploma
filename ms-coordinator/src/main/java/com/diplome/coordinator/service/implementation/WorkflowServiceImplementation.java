@@ -77,8 +77,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
         }
 
         String workflowId = transformationResponse.workflowId();
-        if (transformationResponse.error().isEmpty() || !transformationResponse.message()
-                .equals("Loader for workflow: " + workflowId + " finished")) {
+        if (!transformationResponse.message().equals("Loader for workflow: " + workflowId + " finished")) {
             Transformations nextTransformation;
             String workflowSourceCompositeKey = workflowId.substring(workflowId.indexOf("-"));
             Queue<Transformation> transformationQueue = executingWorkflows.get(workflowSourceCompositeKey);
@@ -104,10 +103,10 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
     private Flux<String> getUpdatesFromWorkflow(String workflowId) {
         return messageSink.asFlux()
-                .filter(message -> !Objects.equals(message.workflowId(), workflowId))
-                .takeUntil(message -> message.message().equals("Loader for workflow: " + workflowId + " finished") || message.error() != null)
+                .filter(message -> Objects.equals(message.workflowId(), workflowId))
+                .takeUntil(message -> message.error() == null || message.message().equals("Loader for workflow: " + workflowId + " finished"))
                 .map(message -> {
-                    if (!message.error().isEmpty()) {
+                    if (message.error() != null) {
                         return message.error();
                     } else {
                         return message.message();
@@ -124,7 +123,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
         kafkaTemplate.send(topic.name(), transformationRequest);
     }
 
-    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).list()}")
+    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).RESPONSE.name()}", containerFactory = "kafkaListenerCoordinatorFactory")
     private void listen(TransformationResponse transformationResponse) {
         this.endOfTransformation(transformationResponse);
     }

@@ -38,4 +38,9 @@ public class KafkaTopicsConfig {
     public NewTopic loader() {
         return new NewTopic(Transformations.LOADER.name(), 2, (short) 1);
     }
+
+    @Bean
+    public NewTopic response() {
+        return new NewTopic(Transformations.RESPONSE.name(), 2, (short) 1);
+    }
 }

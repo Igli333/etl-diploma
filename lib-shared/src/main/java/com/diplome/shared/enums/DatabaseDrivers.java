@@ -13,7 +13,7 @@ public class DatabaseDrivers {
     private static Map<String, String> databaseDrivers(){
         Map<String, String> map = new ConcurrentHashMap<>();
         map.put("MYSQL", "com.mysql.jdbc.Driver");
-        map.put("POSTGRES", "org.postgresql.Driver");
+        map.put("POSTGRESQL", "org.postgresql.Driver");
         map.put("SQLSERVER", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
         return Collections.unmodifiableMap(map);
     }

@@ -14,7 +14,7 @@ public class KafkaConsumer {
 
     private final ExtractorService extractorService;
 
-    @KafkaListener(topics = TOPIC, groupId = "group-id", concurrency = "3")
+    @KafkaListener(topics = TOPIC, groupId = "group-id", concurrency = "3", containerFactory = "kafkaListenerTransformationFactory")
     private void listen(TransformationRequest transformationRequest){
         extractorService.addDatabaseTableLocally(transformationRequest);
     }

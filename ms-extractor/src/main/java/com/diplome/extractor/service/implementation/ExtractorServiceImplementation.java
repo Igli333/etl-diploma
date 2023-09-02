@@ -11,6 +11,7 @@ import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
+import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,7 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Service
 @AllArgsConstructor
@@ -31,51 +32,82 @@ public class ExtractorServiceImplementation implements ExtractorService {
 
     private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
         String databaseType = source.databaseType();
-        String driver = DatabaseDrivers.databaseDrivers.get(databaseType);
+        String driver = DatabaseDrivers.databaseDrivers.get(databaseType.toUpperCase());
         Class.forName(driver);
-        String URI = "jdbc:" + databaseType.toLowerCase() + "//" + source.URI().replace("www.", "");
+        String URI = "jdbc:" + databaseType.toLowerCase() + "://" + source.URI().replace("www.", "");
         return DriverManager.getConnection(URI, source.username(), source.password());
     }
 
     @Override
     public void addDatabaseTableLocally(TransformationRequest transformationRequest) {
         String workflowId = transformationRequest.workFlowId();
-        Workflow workflow = workflowRepository.findWorkflowById(workflowId);
+        Workflow workflow = null;
+        TransformationResponse response = null;
+        if (workflowRepository.findById(workflowId).isPresent()) {
+            workflow = workflowRepository.findById(workflowId).get();
+        } else {
+            response = new TransformationResponse(workflowId,
+                    "", null,
+                    "Extraction for \" + workflow.getWorkflowName() + \" source: \" +  source.name() + \" failed");
+            kafkaTemplate.send(Transformations.RESPONSE.name(), response);
+            return;
+        }
 
         Source source = workflow.getSources().stream()
                 .filter(src -> src.name().equals(transformationRequest.parameters().get("referenceSource"))).toList().get(0);
 
-        TransformationResponse response = null;
 
         try (Connection connection = connectToSourceDatabase(source)) {
             String tableName = source.tableName();
 
             Statement sqlCall = connection.createStatement();
-            sqlCall.executeQuery("USE DATABASE " + source.name() + ";");
             ResultSet getTable = sqlCall.executeQuery("SELECT * FROM " + tableName + ";");
 
             ResultSetMetaData resultSetMetaData = getTable.getMetaData();
             int columnCount = resultSetMetaData.getColumnCount();
 
-            List<String> columns = new ArrayList<>(columnCount);
-            List<String> columnsTypes = new ArrayList<>(columnCount);
+            List<String> columns = new ArrayList<>();
+            List<String> columnsTypes = new ArrayList<>();
 
-            for (int i = 1; i <= columnCount; i++) {
-                columns.add(i, resultSetMetaData.getColumnClassName(i));
-                columnsTypes.add(i, resultSetMetaData.getColumnTypeName(i));
+            for (int i = 0; i < columnCount; i++) {
+                columns.add(i, resultSetMetaData.getColumnName(i + 1));
+
+                String columnDataType = resultSetMetaData.getColumnTypeName(i + 1);
+                int precision = resultSetMetaData.getPrecision(i + 1);
+                int scale = resultSetMetaData.getScale(i + 1);
+
+                if (!columnDataType.equals("serial") &&
+                        !columnDataType.equals("bytea") &&
+                        !columnDataType.equals("text") &&
+                        !columnDataType.equals("json")) {
+                    columnDataType += "(" + precision;
+                    if (scale != 0) {
+                        columnDataType += ", " + scale;
+                    }
+                    columnDataType += ")";
+                }
+
+                columnsTypes.add(i, columnDataType);
             }
 
             String createTableQuery = createTable(connection, tableName, columns, columnsTypes, columnCount);
-            List<String> insertions = insertionQueries(columns, getTable, tableName, columnCount);
+            List<String> insertions = insertionQueries(columns, columnsTypes, getTable, tableName, columnCount);
 
             Connection etlDb = dataSource.getConnection();
 
             try (Statement localDBStatement = etlDb.createStatement()) {
-                localDBStatement.executeQuery(createTableQuery);
+                localDBStatement.executeUpdate(createTableQuery);
 
-                for (String insertion : insertions) {
-                    localDBStatement.executeQuery(insertion);
+               for (String insertion : insertions) {
+                    localDBStatement.executeUpdate(insertion);
                 }
+            } catch (Exception e) {
+                log.log(Level.ERROR, e);
+                response = new TransformationResponse(workflowId,
+                        "", null,
+                        "Extraction for \" + workflow.getWorkflowName() + \" source: \" +  source.name() + \" failed");
+                kafkaTemplate.send(Transformations.RESPONSE.name(), response);
+                return;
             }
 
             response = new TransformationResponse(workflowId, "",
@@ -90,7 +122,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
 
         }
 
-        kafkaTemplate.send(Transformations.EXTRACTOR.name(), response);
+        kafkaTemplate.send(Transformations.RESPONSE.name(), response);
     }
 
     private String createTable(Connection connection, String tableName, List<String> columns, List<String> columnsTypes, int columnCount) throws SQLException {
@@ -99,36 +131,65 @@ public class ExtractorServiceImplementation implements ExtractorService {
         ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, null, tableName);
         primaryKeys.next();
 
-        for (int i = 1; i <= columnCount; i++) {
+        for (int i = 0; i < columnCount; i++) {
             String column = columns.get(i);
-            createTable.append(column).append(" ").append(columnsTypes.get(i));
+            String columnType = columnsTypes.get(i);
 
-            if (primaryKeys.getString("COLUMN_NAME").equals(columns.get(i))) {
-                createTable.append("PRIMARY KEY");
+            if (Objects.equals(columnType, "LONGVARCHAR")) {
+                columnType = "VARCHAR(255)";
             }
 
-            createTable.append(", ");
+            createTable.append(column).append(" ").append(columnType);
+
+            if (primaryKeys.getString("COLUMN_NAME").equals(columns.get(i))) {
+                createTable.append(" ").append("PRIMARY KEY");
+            }
+
+            if (i != columnCount - 1) {
+                createTable.append(", ");
+            }
+
         }
         createTable.append(");");
 
         return createTable.toString();
     }
 
-    private List<String> insertionQueries(List<String> columns, ResultSet getTable, String tableName, int columnCount) throws SQLException {
+    private List<String> insertionQueries(List<String> columns, List<String> columnTypes, ResultSet getTable, String tableName, int columnCount) throws SQLException {
         List<String> insertions = new ArrayList<>();
 
         StringBuilder columnString = new StringBuilder();
 
-        for (String column : columns) {
-            columnString.append(column).append(", ");
+        for (int i = 0; i < columnCount; i++) {
+            columnString.append(columns.get(i));
+            if (i != columnCount - 1) {
+                columnString.append(", ");
+            }
         }
 
         while (getTable.next()) {
             StringBuilder insertNewTable = new StringBuilder("INSERT INTO " + tableName + "(").append(columnString);
             insertNewTable.append(") VALUES(");
 
-            for (int i = 1; i <= columnCount; i++) {
-                insertNewTable.append(getTable.getObject(i)).append(", ");
+            for (int i = 0; i < columnCount; i++) {
+                String newValue = getTable.getString(columns.get(i));
+                if (columnTypes.get(i).startsWith("varchar") ||
+                        columnTypes.get(i).startsWith("char") ||
+                        columnTypes.get(i).startsWith("text") ||
+                        columnTypes.get(i).startsWith("date") ||
+                        columnTypes.get(i).startsWith("time") ||
+                        columnTypes.get(i).startsWith("timestamp") ||
+                        columnTypes.get(i).startsWith("array") ||
+                        columnTypes.get(i).startsWith("json")) {
+
+                    insertNewTable.append("'").append(newValue.replace("'", "''")).append("'");
+                } else {
+                    insertNewTable.append(newValue);
+                }
+                if (i != columnCount - 1) {
+                    insertNewTable.append(", ");
+                }
+
             }
             insertNewTable.append(");");
             insertions.add(insertNewTable.toString());
