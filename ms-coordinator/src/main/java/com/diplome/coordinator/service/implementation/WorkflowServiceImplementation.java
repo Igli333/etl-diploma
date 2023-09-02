@@ -9,6 +9,8 @@ import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.Level;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -22,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
+@Log4j2
 @RequiredArgsConstructor
 public class WorkflowServiceImplementation implements WorkflowService {
 
@@ -31,9 +34,15 @@ public class WorkflowServiceImplementation implements WorkflowService {
     private final Sinks.Many<TransformationResponse> messageSink = Sinks.many().replay().latest();
     private final Map<String, Queue<Transformation>> executingWorkflows = new ConcurrentHashMap<>();
 
+    @Override
     public Flux<String> startWorkflow(WorkflowDto workflowDto) {
         Workflow workflow = dtoToEntity(workflowDto);
-        workflowRepository.save(workflow);
+        try {
+            workflowRepository.save(workflow);
+        } catch (Exception e) {
+            log.log(Level.ERROR, e);
+            return Flux.error(e);
+        }
 
         String workflowId = workflow.getId();
         List<Transformation> transformations = workflow.getTransformations();
@@ -44,14 +53,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
                     .collect(Collectors.toCollection(LinkedList::new));
 
             executingWorkflows.put(workflowSourceCompositeKey, transformationsQueue);
-
-            Map<String, Object> transformationParameters = new HashMap<>();
-            transformationParameters.put("workflowId", workflowId);
-            transformationParameters.put("transformationName", Transformations.EXTRACTOR);
-            transformationParameters.put("referenceSource", source.name());
-            TransformationRequest transformationRequest = new TransformationRequest(workflowId, transformationParameters);
-
-            sendMessage(Transformations.EXTRACTOR, transformationRequest);
+            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, source.name()));
         });
 
         List<Transformation> compositeTransformations = transformations.stream().filter(transformation -> transformation.name().equals(Transformations.JOINER) || transformation.name().equals(Transformations.MERGER)).toList();
@@ -79,32 +81,36 @@ public class WorkflowServiceImplementation implements WorkflowService {
         String workflowId = transformationResponse.workflowId();
         if (!transformationResponse.message().equals("Loader for workflow: " + workflowId + " finished")) {
             Transformations nextTransformation;
-            String workflowSourceCompositeKey = workflowId.substring(workflowId.indexOf("-"));
-            Queue<Transformation> transformationQueue = executingWorkflows.get(workflowSourceCompositeKey);
+            String referenceSource = transformationResponse.sources().get(0);
 
-            if (transformationQueue == null || transformationQueue.isEmpty()) {
-                if (transformationResponse.message().contains("Joiner") || transformationResponse.message().contains("Merger")) {
-                    Queue<Transformation> newLineOfExecution = executingWorkflows.get(workflowId + "-" + transformationResponse.finishedTransformationName());
-                    if (!newLineOfExecution.isEmpty()) {
-                        nextTransformation = newLineOfExecution.poll().name();
-                    } else {
-                        nextTransformation = Transformations.LOADER;
-                    }
-                } else {
-                    nextTransformation = Transformations.LOADER;
-                }
-            } else {
-                nextTransformation = transformationQueue.poll().name();
+            if (transformationResponse.sources().size() > 1) {
+                referenceSource = transformationResponse.finishedTransformationName();
             }
 
-            this.sendMessage(nextTransformation, new TransformationRequest(workflowId, new HashMap<>()));
+            String workflowSourceCompositeKey = transformationResponse.workflowId() + "-" + referenceSource;
+            Queue<Transformation> transformationQueue = executingWorkflows.get(workflowSourceCompositeKey);
+
+            if (!transformationQueue.isEmpty()) {
+                nextTransformation = transformationQueue.poll().name();
+
+            } else {
+                nextTransformation = Transformations.LOADER;
+            }
+
+            sendMessage(nextTransformation, new TransformationRequest(workflowId, referenceSource));
+        } else {
+            messageSink.tryEmitNext(new TransformationResponse(workflowId,
+                    workflowRepository.findById(workflowId).get().getWorkflowName(),
+                    "Workflow with id: " + workflowId + " has finished successfully!",
+                    null, null));
         }
+
     }
 
     private Flux<String> getUpdatesFromWorkflow(String workflowId) {
         return messageSink.asFlux()
                 .filter(message -> Objects.equals(message.workflowId(), workflowId))
-                .takeUntil(message -> message.error() == null || message.message().equals("Loader for workflow: " + workflowId + " finished"))
+                .takeUntil(message -> message.error() == null || message.message().equals("Workflow with id: " + workflowId + " has finished successfully!"))
                 .map(message -> {
                     if (message.error() != null) {
                         return message.error();
@@ -119,13 +125,9 @@ public class WorkflowServiceImplementation implements WorkflowService {
         return modelMapper.map(workflowDto, Workflow.class);
     }
 
-    public void sendMessage(Transformations topic, TransformationRequest transformationRequest) {
+    private void sendMessage(Transformations topic, TransformationRequest transformationRequest) {
         kafkaTemplate.send(topic.name(), transformationRequest);
     }
 
-    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).RESPONSE.name()}", containerFactory = "kafkaListenerCoordinatorFactory")
-    private void listen(TransformationResponse transformationResponse) {
-        this.endOfTransformation(transformationResponse);
-    }
 
 }

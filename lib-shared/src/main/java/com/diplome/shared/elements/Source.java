@@ -1,5 +1,12 @@
 package com.diplome.shared.elements;
 
-public record Source(String name, String databaseType, String URI, String username, String password, String tableName) {
+import org.springframework.data.mongodb.core.index.Indexed;
+
+public record Source(@Indexed(unique = true) String name,
+                     String databaseType,
+                     String URI,
+                     String username,
+                     String password,
+                     String tableName) {
 
 }

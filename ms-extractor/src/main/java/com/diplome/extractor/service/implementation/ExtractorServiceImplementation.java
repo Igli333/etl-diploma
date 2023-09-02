@@ -11,7 +11,6 @@ import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
-import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,32 +29,29 @@ public class ExtractorServiceImplementation implements ExtractorService {
     final private WorkflowRepository workflowRepository;
     private final KafkaTemplate<String, TransformationResponse> kafkaTemplate;
 
-    private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
-        String databaseType = source.databaseType();
-        String driver = DatabaseDrivers.databaseDrivers.get(databaseType.toUpperCase());
-        Class.forName(driver);
-        String URI = "jdbc:" + databaseType.toLowerCase() + "://" + source.URI().replace("www.", "");
-        return DriverManager.getConnection(URI, source.username(), source.password());
-    }
-
     @Override
     public void addDatabaseTableLocally(TransformationRequest transformationRequest) {
-        String workflowId = transformationRequest.workFlowId();
-        Workflow workflow = null;
-        TransformationResponse response = null;
+        String workflowId = transformationRequest.workflowId();
+        String referenceSource = transformationRequest.referenceSource();
+
+        Workflow workflow;
+        TransformationResponse response;
+        String responseString = "Extraction for %s source: %s %s";
+
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
         } else {
             response = new TransformationResponse(workflowId,
-                    "", null,
-                    "Extraction for \" + workflow.getWorkflowName() + \" source: \" +  source.name() + \" failed");
+                    "",
+                    null,
+                    String.format(responseString, workflowId, referenceSource, "failed. It doesn't exist!"),
+                    null);
             kafkaTemplate.send(Transformations.RESPONSE.name(), response);
             return;
         }
 
         Source source = workflow.getSources().stream()
-                .filter(src -> src.name().equals(transformationRequest.parameters().get("referenceSource"))).toList().get(0);
-
+                .filter(src -> src.name().equals(referenceSource)).toList().get(0);
 
         try (Connection connection = connectToSourceDatabase(source)) {
             String tableName = source.tableName();
@@ -90,39 +86,52 @@ public class ExtractorServiceImplementation implements ExtractorService {
                 columnsTypes.add(i, columnDataType);
             }
 
-            String createTableQuery = createTable(connection, tableName, columns, columnsTypes, columnCount);
-            List<String> insertions = insertionQueries(columns, columnsTypes, getTable, tableName, columnCount);
+            String createTableQuery = createTable(connection, referenceSource, columns, columnsTypes, columnCount);
+            List<String> insertions = insertionQueries(columns, columnsTypes, getTable, referenceSource, columnCount);
 
             Connection etlDb = dataSource.getConnection();
 
             try (Statement localDBStatement = etlDb.createStatement()) {
+                // do a check if table exists!
                 localDBStatement.executeUpdate(createTableQuery);
 
-               for (String insertion : insertions) {
+                for (String insertion : insertions) {
                     localDBStatement.executeUpdate(insertion);
                 }
             } catch (Exception e) {
                 log.log(Level.ERROR, e);
                 response = new TransformationResponse(workflowId,
-                        "", null,
-                        "Extraction for \" + workflow.getWorkflowName() + \" source: \" +  source.name() + \" failed");
+                        "",
+                        null,
+                        String.format(responseString, workflowId, referenceSource, "failed"),
+                        null);
                 kafkaTemplate.send(Transformations.RESPONSE.name(), response);
                 return;
             }
 
-            response = new TransformationResponse(workflowId, "",
-                    "Extraction for " + workflow.getWorkflowName() + " source: " + source.name() + " finished",
-                    null);
+            response = new TransformationResponse(workflowId, "Extraction",
+                    String.format(responseString, workflowId, referenceSource, "finished"),
+                    null,
+                    List.of(referenceSource));
 
         } catch (SQLException | ClassNotFoundException e) {
             log.log(Level.ERROR, e);
             response = new TransformationResponse(workflowId,
-                    "", null,
-                    "Extraction for \" + workflow.getWorkflowName() + \" source: \" +  source.name() + \" failed");
-
+                    "",
+                    null,
+                    String.format(responseString, workflowId, referenceSource, "failed."),
+                    null);
         }
 
         kafkaTemplate.send(Transformations.RESPONSE.name(), response);
+    }
+
+    private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
+        String databaseType = source.databaseType();
+        String driver = DatabaseDrivers.databaseDrivers.get(databaseType.toUpperCase());
+        Class.forName(driver);
+        String URI = "jdbc:" + databaseType.toLowerCase() + "://" + source.URI().replace("www.", "");
+        return DriverManager.getConnection(URI, source.username(), source.password());
     }
 
     private String createTable(Connection connection, String tableName, List<String> columns, List<String> columnsTypes, int columnCount) throws SQLException {

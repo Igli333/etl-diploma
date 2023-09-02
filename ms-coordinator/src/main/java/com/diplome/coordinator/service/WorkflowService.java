@@ -7,6 +7,6 @@ import reactor.core.publisher.Flux;
 
 public interface WorkflowService {
     Flux<String> startWorkflow(WorkflowDto workflowDto);
-    void endOfTransformation(TransformationResponse transformationResponse);
 
+    void endOfTransformation(TransformationResponse transformationResponse);
 }

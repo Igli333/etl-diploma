@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.kafka.annotation.EnableKafka;
 
 @EnableKafka
-@SpringBootApplication(scanBasePackages={"com.diplome.shared.configuration", "com.diplome.extractor"})
+@SpringBootApplication(scanBasePackages = {"com.diplome.shared.configuration", "com.diplome.extractor"})
 @EnableMongoRepositories(basePackages = {"com.diplome.shared.repositories"})
 public class MsExtractorApplication {
 

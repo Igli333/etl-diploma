@@ -8,15 +8,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class KafkaConsumer {
-
-    private final String TOPIC = "EXTRACTOR";
+public class ExtractorConsumer {
 
     private final ExtractorService extractorService;
 
-    @KafkaListener(topics = TOPIC, groupId = "group-id", concurrency = "3", containerFactory = "kafkaListenerTransformationFactory")
-    private void listen(TransformationRequest transformationRequest){
+    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).EXCTRACTOR.name()}", groupId = "group-id", concurrency = "3", containerFactory = "kafkaListenerTransformationFactory")
+    private void listen(TransformationRequest transformationRequest) {
         extractorService.addDatabaseTableLocally(transformationRequest);
     }
-
 }
