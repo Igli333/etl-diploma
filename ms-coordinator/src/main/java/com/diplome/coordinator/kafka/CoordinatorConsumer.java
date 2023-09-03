@@ -12,7 +12,9 @@ public class CoordinatorConsumer {
 
     private final WorkflowService workflowService;
 
-    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).RESPONSE.name()}", containerFactory = "kafkaListenerCoordinatorFactory")
+    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).RESPONSE.name()}",
+            concurrency = "3",
+            containerFactory = "kafkaListenerCoordinatorFactory")
     private void listen(TransformationResponse transformationResponse) {
         workflowService.endOfTransformation(transformationResponse);
     }

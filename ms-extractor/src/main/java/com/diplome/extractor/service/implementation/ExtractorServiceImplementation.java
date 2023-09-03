@@ -13,12 +13,12 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @AllArgsConstructor
@@ -30,6 +30,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
     private final KafkaTemplate<String, TransformationResponse> kafkaTemplate;
 
     @Override
+    @Transactional
     public void addDatabaseTableLocally(TransformationRequest transformationRequest) {
         String workflowId = transformationRequest.workflowId();
         String referenceSource = transformationRequest.referenceSource();
@@ -46,7 +47,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
                     null,
                     String.format(responseString, workflowId, referenceSource, "failed. It doesn't exist!"),
                     null);
-            kafkaTemplate.send(Transformations.RESPONSE.name(), response);
+            sendResponse(response);
             return;
         }
 
@@ -65,52 +66,22 @@ public class ExtractorServiceImplementation implements ExtractorService {
             List<String> columns = new ArrayList<>();
             List<String> columnsTypes = new ArrayList<>();
 
-            for (int i = 0; i < columnCount; i++) {
-                columns.add(i, resultSetMetaData.getColumnName(i + 1));
-
-                String columnDataType = resultSetMetaData.getColumnTypeName(i + 1);
-                int precision = resultSetMetaData.getPrecision(i + 1);
-                int scale = resultSetMetaData.getScale(i + 1);
-
-                if (!columnDataType.equals("serial") &&
-                        !columnDataType.equals("bytea") &&
-                        !columnDataType.equals("text") &&
-                        !columnDataType.equals("json")) {
-                    columnDataType += "(" + precision;
-                    if (scale != 0) {
-                        columnDataType += ", " + scale;
-                    }
-                    columnDataType += ")";
-                }
-
-                columnsTypes.add(i, columnDataType);
-            }
+            getColumnInformation(columns, columnsTypes, columnCount, resultSetMetaData);
 
             String createTableQuery = createTable(connection, referenceSource, columns, columnsTypes, columnCount);
             List<String> insertions = insertionQueries(columns, columnsTypes, getTable, referenceSource, columnCount);
 
             Connection etlDb = dataSource.getConnection();
 
-            try (Statement localDBStatement = etlDb.createStatement()) {
-                // do a check if table exists!
-                localDBStatement.executeUpdate(createTableQuery);
+            Statement localDBStatement = etlDb.createStatement();
+            localDBStatement.executeUpdate(createTableQuery);
 
-                for (String insertion : insertions) {
-                    localDBStatement.executeUpdate(insertion);
-                }
-            } catch (Exception e) {
-                log.log(Level.ERROR, e);
-                response = new TransformationResponse(workflowId,
-                        "",
-                        null,
-                        String.format(responseString, workflowId, referenceSource, "failed"),
-                        null);
-                kafkaTemplate.send(Transformations.RESPONSE.name(), response);
-                return;
+            for (String insertion : insertions) {
+                localDBStatement.executeUpdate(insertion);
             }
 
             response = new TransformationResponse(workflowId, "Extraction",
-                    String.format(responseString, workflowId, referenceSource, "finished"),
+                    String.format(responseString, workflowId, referenceSource, "finished!"),
                     null,
                     List.of(referenceSource));
 
@@ -123,7 +94,30 @@ public class ExtractorServiceImplementation implements ExtractorService {
                     null);
         }
 
-        kafkaTemplate.send(Transformations.RESPONSE.name(), response);
+        sendResponse(response);
+    }
+
+    private void getColumnInformation(List<String> columns, List<String> columnsTypes, int columnCount, ResultSetMetaData resultSetMetaData) throws SQLException {
+        for (int i = 0; i < columnCount; i++) {
+            columns.add(i, resultSetMetaData.getColumnName(i + 1));
+
+            String columnDataType = resultSetMetaData.getColumnTypeName(i + 1);
+            int precision = resultSetMetaData.getPrecision(i + 1);
+            int scale = resultSetMetaData.getScale(i + 1);
+
+            if (!columnDataType.equals("serial") &&
+                    !columnDataType.equals("bytea") &&
+                    !columnDataType.equals("text") &&
+                    !columnDataType.equals("json")) {
+                columnDataType += "(" + precision;
+                if (scale != 0) {
+                    columnDataType += ", " + scale;
+                }
+                columnDataType += ")";
+            }
+
+            columnsTypes.add(i, columnDataType);
+        }
     }
 
     private Connection connectToSourceDatabase(Source source) throws SQLException, ClassNotFoundException {
@@ -143,10 +137,6 @@ public class ExtractorServiceImplementation implements ExtractorService {
         for (int i = 0; i < columnCount; i++) {
             String column = columns.get(i);
             String columnType = columnsTypes.get(i);
-
-            if (Objects.equals(columnType, "LONGVARCHAR")) {
-                columnType = "VARCHAR(255)";
-            }
 
             createTable.append(column).append(" ").append(columnType);
 
@@ -207,4 +197,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return insertions;
     }
 
+    private void sendResponse(TransformationResponse response) {
+        kafkaTemplate.send(Transformations.RESPONSE.name(), response);
+    }
 }

@@ -13,7 +13,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -53,16 +52,18 @@ public class WorkflowServiceImplementation implements WorkflowService {
                     .collect(Collectors.toCollection(LinkedList::new));
 
             executingWorkflows.put(workflowSourceCompositeKey, transformationsQueue);
-            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, source.name()));
+            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, source.name(), ""));
         });
 
-        List<Transformation> compositeTransformations = transformations.stream().filter(transformation -> transformation.name().equals(Transformations.JOINER) || transformation.name().equals(Transformations.MERGER)).toList();
+        List<Transformation> compositeTransformations = transformations.stream().filter(transformation ->
+                transformation.type().equals(Transformations.JOINER) || transformation.type().equals(Transformations.MERGER)).toList();
 
         if (!compositeTransformations.isEmpty()) {
             compositeTransformations.forEach(compositeTransformation -> {
                 Queue<Transformation> afterJoin = transformations.stream()
-                        .filter(transformation -> transformation.parameters().get("source").equals(compositeTransformation.name().name()))
+                        .filter(transformation -> transformation.parameters().get("source").equals(compositeTransformation.name()))
                         .collect(Collectors.toCollection(LinkedList::new));
+
                 executingWorkflows.put(workflowId + "-" + compositeTransformation.name(), afterJoin);
             });
         }
@@ -80,7 +81,6 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
         String workflowId = transformationResponse.workflowId();
         if (!transformationResponse.message().equals("Loader for workflow: " + workflowId + " finished")) {
-            Transformations nextTransformation;
             String referenceSource = transformationResponse.sources().get(0);
 
             if (transformationResponse.sources().size() > 1) {
@@ -91,13 +91,11 @@ public class WorkflowServiceImplementation implements WorkflowService {
             Queue<Transformation> transformationQueue = executingWorkflows.get(workflowSourceCompositeKey);
 
             if (!transformationQueue.isEmpty()) {
-                nextTransformation = transformationQueue.poll().name();
-
+                Transformation nextTransformation = transformationQueue.poll();
+                sendMessage(nextTransformation.type(), new TransformationRequest(workflowId, referenceSource, nextTransformation.name()));
             } else {
-                nextTransformation = Transformations.LOADER;
+                sendMessage(Transformations.LOADER, new TransformationRequest(workflowId, referenceSource, ""));
             }
-
-            sendMessage(nextTransformation, new TransformationRequest(workflowId, referenceSource));
         } else {
             messageSink.tryEmitNext(new TransformationResponse(workflowId,
                     workflowRepository.findById(workflowId).get().getWorkflowName(),

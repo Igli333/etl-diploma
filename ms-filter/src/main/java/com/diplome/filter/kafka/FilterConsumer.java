@@ -1,6 +1,6 @@
-package com.diplome.extractor.kafka;
+package com.diplome.filter.kafka;
 
-import com.diplome.extractor.service.ExtractorService;
+import com.diplome.filter.service.FilterService;
 import com.diplome.shared.elements.TransformationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -8,14 +8,14 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class ExtractorConsumer {
+public class FilterConsumer {
 
-    private final ExtractorService extractorService;
+    private final FilterService filterService;
 
     @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).EXCTRACTOR.name()}",
             concurrency = "3",
             containerFactory = "kafkaListenerTransformationFactory")
-    private void listen(TransformationRequest transformationRequest) {
-        extractorService.addDatabaseTableLocally(transformationRequest);
+    private void filterListener(TransformationRequest transformationRequest) {
+        filterService.filter(transformationRequest);
     }
 }
