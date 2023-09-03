@@ -5,5 +5,5 @@ import com.diplome.shared.elements.TransformationRequest;
 import java.sql.SQLException;
 
 public interface FilterService {
-    void filter(TransformationRequest request) throws SQLException;
+    void filter(TransformationRequest request);
 }

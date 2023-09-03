@@ -45,7 +45,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
             response = new TransformationResponse(workflowId,
                     "",
                     null,
-                    String.format(responseString, workflowId, referenceSource, "failed. It doesn't exist!"),
+                    String.format(responseString, workflowId, referenceSource, "failed. Workflow doesn't exist!"),
                     null);
             sendResponse(response);
             return;
@@ -71,6 +71,8 @@ public class ExtractorServiceImplementation implements ExtractorService {
             String createTableQuery = createTable(connection, referenceSource, columns, columnsTypes, columnCount);
             List<String> insertions = insertionQueries(columns, columnsTypes, getTable, referenceSource, columnCount);
 
+            connection.close();
+
             Connection etlDb = dataSource.getConnection();
 
             Statement localDBStatement = etlDb.createStatement();
@@ -84,6 +86,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
                     String.format(responseString, workflowId, referenceSource, "finished!"),
                     null,
                     List.of(referenceSource));
+
 
         } catch (SQLException | ClassNotFoundException e) {
             log.log(Level.ERROR, e);

@@ -12,7 +12,6 @@ import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
-import org.modelmapper.ModelMapper;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,8 +63,8 @@ public class FilterServiceImplementation implements FilterService {
         String filterQuery = createFilterQuery(referenceSource, filter);
 
         try (Connection etlDb = dataSource.getConnection()) {
-            Statement localDBStatement = etlDb.createStatement();
-            localDBStatement.executeUpdate(filterQuery);
+            Statement filterStatement = etlDb.createStatement();
+            filterStatement.executeUpdate(filterQuery);
 
             response = new TransformationResponse(workflowId, transformationName,
                     String.format(responseString, transformationName, referenceSource, "finished!"),

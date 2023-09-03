@@ -12,7 +12,7 @@ public class FilterConsumer {
 
     private final FilterService filterService;
 
-    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).EXCTRACTOR.name()}",
+    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).FILTER.name()}",
             concurrency = "3",
             containerFactory = "kafkaListenerTransformationFactory")
     private void filterListener(TransformationRequest transformationRequest) {
