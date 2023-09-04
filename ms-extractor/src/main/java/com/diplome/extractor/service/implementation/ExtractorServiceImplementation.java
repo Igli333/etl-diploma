@@ -68,10 +68,8 @@ public class ExtractorServiceImplementation implements ExtractorService {
 
             getColumnInformation(columns, columnsTypes, columnCount, resultSetMetaData);
 
-            String createTableQuery = createTable(connection, referenceSource, columns, columnsTypes, columnCount);
+            String createTableQuery = createTable(connection, referenceSource, columns, columnsTypes, columnCount, tableName);
             List<String> insertions = insertionQueries(columns, columnsTypes, getTable, referenceSource, columnCount);
-
-            connection.close();
 
             Connection etlDb = dataSource.getConnection();
 
@@ -131,11 +129,12 @@ public class ExtractorServiceImplementation implements ExtractorService {
         return DriverManager.getConnection(URI, source.username(), source.password());
     }
 
-    private String createTable(Connection connection, String tableName, List<String> columns, List<String> columnsTypes, int columnCount) throws SQLException {
-        StringBuilder createTable = new StringBuilder("CREATE TABLE " + tableName + " (");
+    private String createTable(Connection connection, String referenceSource, List<String> columns, List<String> columnsTypes, int columnCount, String tableName) throws SQLException {
+        StringBuilder createTable = new StringBuilder("CREATE TABLE " + referenceSource + " (");
 
-        ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, null, tableName);
+        ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, connection.getSchema(), tableName);
         primaryKeys.next();
+        String primaryKey = primaryKeys.getString("COLUMN_NAME");
 
         for (int i = 0; i < columnCount; i++) {
             String column = columns.get(i);
@@ -143,7 +142,7 @@ public class ExtractorServiceImplementation implements ExtractorService {
 
             createTable.append(column).append(" ").append(columnType);
 
-            if (primaryKeys.getString("COLUMN_NAME").equals(columns.get(i))) {
+            if (primaryKey.equals(column)) {
                 createTable.append(" ").append("PRIMARY KEY");
             }
 

@@ -41,7 +41,7 @@ public class FilterServiceImplementation implements FilterService {
 
         Workflow workflow;
         TransformationResponse response;
-        String responseString = "Filter transformation %s for %s source: %s %s";
+        String responseString = "Filter transformation %s for source: %s %s";
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
         } else {
@@ -86,15 +86,15 @@ public class FilterServiceImplementation implements FilterService {
     private String createFilterQuery(String tableName, Transformation filter) {
         List<Filter> filters = mapper.map((List<?>) filter.parameters().get("filters"), Filter.class);
 
-        StringBuilder filterQueryBuilder = new StringBuilder("DELETE FROM" + tableName + " WHERE ");
+        StringBuilder filterQueryBuilder = new StringBuilder("DELETE FROM " + tableName + " WHERE ");
 
         filters.forEach(flt -> {
-            String operator = flt.logicalOperator();
-            if (!Objects.equals(operator, "")) {
+            String operator = flt.getLogicalOperator();
+            if (operator != null && !Objects.equals(operator, "")) {
                 filterQueryBuilder.append(operator).append(" ");
             }
 
-            filterQueryBuilder.append(flt.filterColumn()).append(" ").append(flt.filterRule()).append(" ");
+            filterQueryBuilder.append(flt.getFilterColumn()).append(" ").append(flt.getFilterRule()).append(" ");
         });
 
         filterQueryBuilder.append(";");

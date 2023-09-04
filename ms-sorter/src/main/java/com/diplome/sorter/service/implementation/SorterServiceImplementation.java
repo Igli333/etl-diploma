@@ -8,7 +8,7 @@ import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import com.diplome.sorter.service.SorterService;
-import com.diplome.sorter.service.elements.SortingRule;
+import com.diplome.sorter.elements.SortingRule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
@@ -59,18 +59,18 @@ public class SorterServiceImplementation implements SorterService {
                                 && transformation.parameters().get("source").equals(referenceSource))
                 .toList().get(0);
 
-        String createNewTableQuery = "CREATE TABLE " + referenceSource + "-2 LIKE " + referenceSource + ";";
+        String createNewTableQuery = "CREATE TABLE " + referenceSource + "Copy (LIKE " + referenceSource + ");";
 
         try (Connection etl = dataSource.getConnection()) {
             Statement etlStatement = etl.createStatement();
             etlStatement.executeUpdate(createNewTableQuery);
-            ResultSet columns = etlStatement.executeQuery("SELECT * FROM " + referenceSource + "-2 WHERE 1 = 0;");
+            ResultSet columns = etlStatement.executeQuery("SELECT * FROM " + referenceSource + "Copy WHERE 1 = 0;");
 
             String transferQuery = transferQuery(etl, referenceSource, columns, sorter);
             etlStatement.executeUpdate(transferQuery);
 
             etlStatement.executeUpdate("DROP TABLE " + referenceSource);
-            etlStatement.executeUpdate("ALTER TABLE " + referenceSource + "-2 RENAME TO " + referenceSource + ";");
+            etlStatement.executeUpdate("ALTER TABLE " + referenceSource + "Copy RENAME TO " + referenceSource + ";");
 
             response = new TransformationResponse(workflowId,
                     transformationName,
@@ -93,7 +93,7 @@ public class SorterServiceImplementation implements SorterService {
     }
 
     private String transferQuery(Connection connection, String tableName, ResultSet columnsResultSet, Transformation sorter) throws SQLException {
-        StringBuilder insert = new StringBuilder("INSERT INTO " + tableName + "-2 (");
+        StringBuilder insert = new StringBuilder("INSERT INTO " + tableName + "Copy (");
         StringBuilder select = new StringBuilder("SELECT ");
         ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, null, tableName);
         primaryKeys.next();
@@ -114,7 +114,7 @@ public class SorterServiceImplementation implements SorterService {
         }
 
         insert.append(") ");
-        select.append(") FROM ").append(tableName).append(" ").append(sortingCondition(sorter)).append(";");
+        select.append(" FROM ").append(tableName).append(" ORDER BY ").append(sortingCondition(sorter)).append(";");
         insert.append(select);
 
         return insert.toString();
@@ -128,7 +128,7 @@ public class SorterServiceImplementation implements SorterService {
 
         for (int i = 0; i < rulesSize; i++) {
             SortingRule rule = sortingRules.get(i);
-            rulesString.append(rule.sortColumn()).append(" ").append(rule.order());
+            rulesString.append(rule.getSortColumn()).append(" ").append(rule.getOrder());
             if (i != rulesSize - 1) {
                 rulesString.append(", ");
             }

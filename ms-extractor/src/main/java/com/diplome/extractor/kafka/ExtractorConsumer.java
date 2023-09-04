@@ -12,7 +12,7 @@ public class ExtractorConsumer {
 
     private final ExtractorService extractorService;
 
-    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).EXCTRACTOR.name()}",
+    @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).EXTRACTOR.name()}",
             concurrency = "3",
             containerFactory = "kafkaListenerTransformationFactory")
     private void listen(TransformationRequest transformationRequest) {

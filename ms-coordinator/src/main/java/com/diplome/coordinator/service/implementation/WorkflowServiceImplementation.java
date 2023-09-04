@@ -48,7 +48,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
         workflow.getSources().forEach(source -> {
             String workflowSourceCompositeKey = workflowId + "-" + source.name();
             Queue<Transformation> transformationsQueue = transformations.stream()
-                    .filter(transformation -> !transformation.parameters().get("source").equals(source.name()))
+                    .filter(transformation -> transformation.parameters().get("source").equals(source.name()))
                     .collect(Collectors.toCollection(LinkedList::new));
 
             executingWorkflows.put(workflowSourceCompositeKey, transformationsQueue);
@@ -108,14 +108,18 @@ public class WorkflowServiceImplementation implements WorkflowService {
     private Flux<String> getUpdatesFromWorkflow(String workflowId) {
         return messageSink.asFlux()
                 .filter(message -> Objects.equals(message.workflowId(), workflowId))
-                .takeUntil(message -> message.error() == null || message.message().equals("Workflow with id: " + workflowId + " has finished successfully!"))
+                .takeUntil(message -> message.error() != null || message.message().equals("Workflow with id: " + workflowId + " has finished successfully!"))
                 .map(message -> {
                     if (message.error() != null) {
                         return message.error();
                     } else {
                         return message.message();
                     }
-                });
+                }).doAfterTerminate(() -> executingWorkflows.keySet().forEach(key -> {
+                    if (key.startsWith(workflowId)) {
+                        executingWorkflows.remove(key);
+                    }
+                }));
     }
 
     private Workflow dtoToEntity(WorkflowDto workflowDto) {
