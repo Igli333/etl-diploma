@@ -9,12 +9,12 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class SorterListener {
-    private final SorterService service;
+    private final SorterService sorterService;
 
     @KafkaListener(topics = "#{T(com.diplome.shared.enums.Transformations).SORTER.name()}",
             concurrency = "3",
             containerFactory = "kafkaListenerTransformationFactory")
     private void sorterListener(TransformationRequest request) {
-        service.sort(request);
+        sorterService.sort(request);
     }
 }

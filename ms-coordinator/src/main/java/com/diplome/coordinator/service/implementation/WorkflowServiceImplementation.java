@@ -48,11 +48,16 @@ public class WorkflowServiceImplementation implements WorkflowService {
         workflow.getSources().forEach(source -> {
             String workflowSourceCompositeKey = workflowId + "-" + source.name();
             Queue<Transformation> transformationsQueue = transformations.stream()
-                    .filter(transformation -> transformation.parameters().get("source").equals(source.name()))
+                    .filter(transformation -> {
+                        Map<String, Object> parameters = transformation.parameters();
+                        boolean hasMergeForward = parameters.containsKey("sourceToMerge");
+                        return parameters.get("source").equals(source.name()) ||
+                                (hasMergeForward && parameters.get("sourceToMerge").equals(source.name()));
+                    })
                     .collect(Collectors.toCollection(LinkedList::new));
 
             executingWorkflows.put(workflowSourceCompositeKey, transformationsQueue);
-            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, source.name(), ""));
+            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, workflow.getWorkflowName(), source.name(), ""));
         });
 
         List<Transformation> compositeTransformations = transformations.stream().filter(transformation ->
@@ -80,6 +85,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
         }
 
         String workflowId = transformationResponse.workflowId();
+        String workflowName = transformationResponse.workflowName();
         if (!transformationResponse.message().equals("Loader for workflow: " + workflowId + " finished")) {
             String referenceSource = transformationResponse.sources().get(0);
 
@@ -92,15 +98,17 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
             if (!transformationQueue.isEmpty()) {
                 Transformation nextTransformation = transformationQueue.poll();
-                sendMessage(nextTransformation.type(), new TransformationRequest(workflowId, referenceSource, nextTransformation.name()));
+                sendMessage(nextTransformation.type(), new TransformationRequest(workflowId, workflowName, referenceSource, nextTransformation.name()));
             } else {
-                sendMessage(Transformations.LOADER, new TransformationRequest(workflowId, referenceSource, ""));
+                sendMessage(Transformations.LOADER, new TransformationRequest(workflowId, workflowName, referenceSource, ""));
             }
         } else {
             messageSink.tryEmitNext(new TransformationResponse(workflowId,
-                    workflowRepository.findById(workflowId).get().getWorkflowName(),
-                    "Workflow with id: " + workflowId + " has finished successfully!",
-                    null, null));
+                    transformationResponse.workflowName(),
+                    "WORKFLOW",
+                    "Workflow with name: " + workflowName + " has finished successfully!",
+                    null,
+                    null));
         }
 
     }
@@ -108,7 +116,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
     private Flux<String> getUpdatesFromWorkflow(String workflowId) {
         return messageSink.asFlux()
                 .filter(message -> Objects.equals(message.workflowId(), workflowId))
-                .takeUntil(message -> message.error() != null || message.message().equals("Workflow with id: " + workflowId + " has finished successfully!"))
+                .takeUntil(message -> message.error() != null || message.finishedTransformationName().equals("WORKFLOW"))
                 .map(message -> {
                     if (message.error() != null) {
                         return message.error();

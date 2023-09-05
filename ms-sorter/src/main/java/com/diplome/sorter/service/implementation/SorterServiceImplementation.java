@@ -34,20 +34,22 @@ public class SorterServiceImplementation implements SorterService {
     @Transactional
     public void sort(TransformationRequest request) {
         String workflowId = request.workflowId();
+        String workflowName = request.workflowName();
         String referenceSource = request.referenceSource();
         String transformationName = request.transformationName();
 
         Workflow workflow;
         TransformationResponse response;
-        String responseString = "Sorter transformation " + transformationName + " for " + workflowId + " source: " + referenceSource + " %s";
+        String responseString = "Sorter transformation " + transformationName + " for " + workflowName + " source: " + referenceSource + " %s";
 
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
         } else {
             response = new TransformationResponse(workflowId,
-                    "",
-                    null,
+                    workflowName,
+                    Transformations.SORTER.name(),
                     String.format(responseString, "failed. Workflow doesn't exist!"),
+                    null,
                     null);
             sendResponse(response);
             return;
@@ -66,13 +68,14 @@ public class SorterServiceImplementation implements SorterService {
             etlStatement.executeUpdate(createNewTableQuery);
             ResultSet columns = etlStatement.executeQuery("SELECT * FROM " + referenceSource + "Copy WHERE 1 = 0;");
 
-            String transferQuery = transferQuery(etl, referenceSource, columns, sorter);
+            String transferQuery = transferQuery(etl, etlStatement, referenceSource, columns, sorter);
             etlStatement.executeUpdate(transferQuery);
 
             etlStatement.executeUpdate("DROP TABLE " + referenceSource);
             etlStatement.executeUpdate("ALTER TABLE " + referenceSource + "Copy RENAME TO " + referenceSource + ";");
 
             response = new TransformationResponse(workflowId,
+                    workflowName,
                     transformationName,
                     String.format(responseString, "finished successfully!"),
                     null,
@@ -82,6 +85,7 @@ public class SorterServiceImplementation implements SorterService {
         } catch (SQLException e) {
             log.log(Level.ERROR, e);
             response = new TransformationResponse(workflowId,
+                    workflowName,
                     transformationName,
                     null,
                     String.format(responseString, "failed."),
@@ -89,21 +93,23 @@ public class SorterServiceImplementation implements SorterService {
         }
 
         sendResponse(response);
-
     }
 
-    private String transferQuery(Connection connection, String tableName, ResultSet columnsResultSet, Transformation sorter) throws SQLException {
+    private String transferQuery(Connection connection, Statement statement, String tableName, ResultSet columnsResultSet, Transformation sorter) throws SQLException {
         StringBuilder insert = new StringBuilder("INSERT INTO " + tableName + "Copy (");
         StringBuilder select = new StringBuilder("SELECT ");
-        ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, null, tableName);
-        primaryKeys.next();
-
         ResultSetMetaData columnsMetadata = columnsResultSet.getMetaData();
         int numberOfColumns = columnsMetadata.getColumnCount();
 
+        ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, null, tableName);
+        primaryKeys.next();
+        String primaryKey = primaryKeys.getString("COLUMN_NAME");
+
+        fixPrimaryKey(statement, tableName, primaryKey);
+
         for (int i = 0; i < numberOfColumns; i++) {
             String columnName = columnsMetadata.getColumnName(i + 1);
-            if (!primaryKeys.getString("COLUMN_NAME").equals(columnName)) {
+            if (!primaryKey.equals(columnName)) {
                 insert.append(columnName);
                 select.append(columnName);
                 if (i != numberOfColumns - 1) {
@@ -118,6 +124,17 @@ public class SorterServiceImplementation implements SorterService {
         insert.append(select);
 
         return insert.toString();
+    }
+
+    private void fixPrimaryKey(Statement statement, String tableName, String primaryKey) throws SQLException {
+        String createSequence = "CREATE SEQUENCE increment_seq START 1 INCREMENT 1;";
+        statement.executeUpdate(createSequence);
+
+        String alterSequence = "ALTER TABLE " + tableName + "Copy ALTER COLUMN " + primaryKey + " SET DEFAULT nextval('increment_seq');";
+        statement.executeUpdate(alterSequence);
+
+        String alterTableQuery = "ALTER TABLE " + tableName + "Copy ADD CONSTRAINT " + tableName + "Copy_pkey PRIMARY KEY (" + primaryKey + ");";
+        statement.executeUpdate(alterTableQuery);
     }
 
     private String sortingCondition(Transformation sorter) {

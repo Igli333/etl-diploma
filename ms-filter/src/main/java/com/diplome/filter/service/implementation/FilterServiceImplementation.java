@@ -36,19 +36,21 @@ public class FilterServiceImplementation implements FilterService {
     @Transactional
     public void filter(TransformationRequest request) {
         String workflowId = request.workflowId();
+        String workflowName = request.workflowName();
         String referenceSource = request.referenceSource();
         String transformationName = request.transformationName();
 
         Workflow workflow;
         TransformationResponse response;
-        String responseString = "Filter transformation %s for source: %s %s";
+        String responseString = "Filter transformation " + transformationName + " for workflow: " + workflowName + " %s";
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
         } else {
             response = new TransformationResponse(workflowId,
-                    "",
+                    workflowName,
+                    transformationName,
                     null,
-                    String.format(responseString, transformationName, referenceSource, "failed. Workflow doesn't exist!"),
+                    String.format(responseString, "failed. Workflow doesn't exist!"),
                     null);
             sendResponse(response);
             return;
@@ -66,16 +68,19 @@ public class FilterServiceImplementation implements FilterService {
             Statement filterStatement = etlDb.createStatement();
             filterStatement.executeUpdate(filterQuery);
 
-            response = new TransformationResponse(workflowId, transformationName,
-                    String.format(responseString, transformationName, referenceSource, "finished!"),
+            response = new TransformationResponse(workflowId,
+                    workflowName,
+                    transformationName,
+                    String.format(responseString, "finished!"),
                     null,
                     List.of(referenceSource));
         } catch (SQLException e) {
             log.log(Level.ERROR, e);
             response = new TransformationResponse(workflowId,
+                    workflowName,
                     transformationName,
                     null,
-                    String.format(responseString, transformationName, referenceSource, "failed."),
+                    String.format(responseString, "failed."),
                     null);
         }
 

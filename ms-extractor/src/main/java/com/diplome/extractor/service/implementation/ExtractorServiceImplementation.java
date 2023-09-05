@@ -33,19 +33,21 @@ public class ExtractorServiceImplementation implements ExtractorService {
     @Transactional
     public void addDatabaseTableLocally(TransformationRequest transformationRequest) {
         String workflowId = transformationRequest.workflowId();
+        String workflowName = transformationRequest.transformationName();
         String referenceSource = transformationRequest.referenceSource();
 
         Workflow workflow;
         TransformationResponse response;
-        String responseString = "Extraction for %s source: %s %s";
+        String responseString = "Extraction for workflows: " + workflowName + " source: " + referenceSource + " %s";
 
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
         } else {
             response = new TransformationResponse(workflowId,
-                    "",
+                    workflowName,
                     null,
-                    String.format(responseString, workflowId, referenceSource, "failed. Workflow doesn't exist!"),
+                    String.format(responseString, "failed. Workflow doesn't exist!"),
+                    null,
                     null);
             sendResponse(response);
             return;
@@ -81,7 +83,8 @@ public class ExtractorServiceImplementation implements ExtractorService {
             }
 
             response = new TransformationResponse(workflowId, "Extraction",
-                    String.format(responseString, workflowId, referenceSource, "finished!"),
+                    workflowName,
+                    String.format(responseString, "finished!"),
                     null,
                     List.of(referenceSource));
 
@@ -89,9 +92,10 @@ public class ExtractorServiceImplementation implements ExtractorService {
         } catch (SQLException | ClassNotFoundException e) {
             log.log(Level.ERROR, e);
             response = new TransformationResponse(workflowId,
-                    "",
+                    workflowName,
+                    workflowId + "-" + referenceSource,
                     null,
-                    String.format(responseString, workflowId, referenceSource, "failed."),
+                    String.format(responseString, "failed."),
                     null);
         }
 

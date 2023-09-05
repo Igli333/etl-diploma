@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
 @RestController
-@RequestMapping("/etl/init")
+@RequestMapping("/etl")
 @RequiredArgsConstructor
 public class EtlController {
 
     private final WorkflowService workflowService;
 
-    @PostMapping()
+    @PostMapping(path = "/init", produces = "text/event-stream")
     public Flux<String> initializeWorkflow(@RequestBody WorkflowDto workflow) {
         return workflowService.startWorkflow(workflow);
     }

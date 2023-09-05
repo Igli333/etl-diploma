@@ -1,2 +1,9 @@
 server:
   port: 8088
+
+spring:
+  data:
+    mongodb:
+      database: etl
+      port: 27017
+      host: localhost
