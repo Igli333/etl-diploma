@@ -21,7 +21,7 @@ public class MergerListener {
             containerFactory = "kafkaListenerTransformationFactory")
     private void sorterListener(TransformationRequest request) {
         if (!messagesForMerge.containsKey(request.workflowId())) {
-            messagesForMerge.put(request.referenceSource(), request);
+            messagesForMerge.put(request.workflowId(), request);
         } else {
             mergerService.merge(messagesForMerge.get(request.workflowId()), request);
             messagesForMerge.remove(request.workflowId());

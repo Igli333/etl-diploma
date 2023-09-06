@@ -116,7 +116,17 @@ public class MergerServiceImplementation implements MergerService {
         select.delete(select.length() - 2, select.length()).append(" FROM ").append(secondaryTable).append(";");
         insert.append(select);
 
+        resetSequence(connection, mainTable, primaryKey);
+
         return insert.toString();
+    }
+
+    private void resetSequence(Connection connection, String tableName, String primaryKey) throws SQLException {
+        String setInSync = "SELECT SETVAL((SELECT PG_GET_SERIAL_SEQUENCE('\"" + tableName + "\"', '"
+                + primaryKey + "')), (SELECT (MAX(\"" + primaryKey + "\") + 1) FROM \"" + tableName + "\"), FALSE);";
+
+        Statement syncStatement = connection.createStatement();
+        syncStatement.executeQuery(setInSync);
     }
 
     private void sendResponse(TransformationResponse response) {

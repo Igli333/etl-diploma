@@ -33,12 +33,12 @@ public class ExtractorServiceImplementation implements ExtractorService {
     @Transactional
     public void addDatabaseTableLocally(TransformationRequest transformationRequest) {
         String workflowId = transformationRequest.workflowId();
-        String workflowName = transformationRequest.transformationName();
+        String workflowName = transformationRequest.workflowName();
         String referenceSource = transformationRequest.referenceSource();
 
         Workflow workflow;
         TransformationResponse response;
-        String responseString = "Extraction for workflows: " + workflowName + " source: " + referenceSource + " %s";
+        String responseString = "Extraction for workflow: " + workflowName + " source: " + referenceSource + " %s";
 
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
@@ -82,8 +82,9 @@ public class ExtractorServiceImplementation implements ExtractorService {
                 localDBStatement.executeUpdate(insertion);
             }
 
-            response = new TransformationResponse(workflowId, "Extraction",
+            response = new TransformationResponse(workflowId,
                     workflowName,
+                    "Extraction",
                     String.format(responseString, "finished!"),
                     null,
                     List.of(referenceSource));
