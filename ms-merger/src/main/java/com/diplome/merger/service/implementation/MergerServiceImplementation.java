@@ -16,10 +16,8 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
@@ -31,17 +29,15 @@ public class MergerServiceImplementation implements MergerService {
     private final DataSource dataSource;
 
     @Override
-    public void merge(TransformationRequest request1, TransformationRequest request2) {
-        String workflowId = request1.workflowId();
-        String workflowName = request1.workflowName();
-        String mainSource = request1.referenceSource();
-        String secondarySource = request2.referenceSource();
-        String transformationName = request1.transformationName();
+    public void merge(TransformationRequest... request) {
+        TransformationRequest firstRequest = request[0];
+        String workflowId = firstRequest.workflowId();
+        String workflowName = firstRequest.workflowName();
+        String transformationName = firstRequest.transformationName();
 
         Workflow workflow;
         TransformationResponse response;
         String responseString = "Merger transformation " + transformationName + " for " + workflowName + " %s";
-
 
         if (workflowRepository.findById(workflowId).isPresent()) {
             workflow = workflowRepository.findById(workflowId).get();
@@ -57,25 +53,42 @@ public class MergerServiceImplementation implements MergerService {
         }
 
         Transformation merger = workflow.getTransformations().stream().filter(transformation ->
-                        transformation.type().equals(Transformations.MERGER)
-                                && transformation.name().equals(transformationName)
-                                && transformation.parameters().get("source").equals(mainSource)
-                                && transformation.parameters().get("sourceToMerge").equals(secondarySource))
+                        transformation.type().equals(Transformations.MERGER) &&
+                                transformation.name().equals(transformationName))
                 .toList().get(0);
+
+        String mainSource = merger.parameters().get("source").toString();
+        List<Map<String, Object>> secondarySources = ((List<Map<String, Object>>) merger.parameters().get("secondarySources"));
 
         try (Connection etl = dataSource.getConnection()) {
             Statement etlStatement = etl.createStatement();
 
-            String mergeQuery = transferQuery(etl, mainSource, secondarySource, merger);
+            for (Map<String, Object> sndSource : secondarySources) {
+                String sourceName = (String) sndSource.get("name");
+                String mergeQuery = transferQuery(etl,
+                        mainSource,
+                        sourceName,
+                        (Map<String, String>) sndSource.get("columnMapping"));
 
-            etlStatement.executeUpdate(mergeQuery);
+                etlStatement.executeUpdate(mergeQuery);
+
+                etlStatement.executeUpdate("DROP TABLE " + sourceName);
+            }
+
+            String renameTable = "ALTER TABLE " + mainSource + " RENAME TO " + transformationName + " ;";
+
+            etlStatement.executeUpdate(renameTable);
+
+            List<String> refSources = ((List<Object>) merger.parameters().get("secondarySources"))
+                    .stream().map(sources -> (String) ((Map<String, Object>) sources).get("name")).collect(Collectors.toList());
+            refSources.add(0, mainSource);
 
             response = new TransformationResponse(workflowId,
                     workflowName,
                     transformationName,
                     String.format(responseString, "finished successfully!"),
                     null,
-                    List.of(mainSource, secondarySource));
+                    refSources);
 
         } catch (SQLException e) {
             log.log(Level.ERROR, e);
@@ -90,7 +103,7 @@ public class MergerServiceImplementation implements MergerService {
         sendResponse(response);
     }
 
-    private String transferQuery(Connection connection, String mainTable, String secondaryTable, Transformation merger) throws SQLException {
+    private String transferQuery(Connection connection, String mainTable, String secondaryTable, Map<String, String> columnsMapping) throws SQLException {
         StringBuilder insert = new StringBuilder("INSERT INTO " + mainTable + " (");
         StringBuilder select = new StringBuilder("SELECT ");
 
@@ -98,7 +111,6 @@ public class MergerServiceImplementation implements MergerService {
         primaryKeys.next();
         String primaryKey = primaryKeys.getString("COLUMN_NAME");
 
-        Map<String, String> columnsMapping = (HashMap<String, String>) merger.parameters().get("columnMapping");
         Set<String> mainColumns = columnsMapping.keySet();
 
         for (String mainColumn : mainColumns) {

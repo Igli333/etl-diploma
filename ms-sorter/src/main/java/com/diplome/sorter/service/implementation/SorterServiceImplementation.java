@@ -61,18 +61,18 @@ public class SorterServiceImplementation implements SorterService {
                                 && transformation.parameters().get("source").equals(referenceSource))
                 .toList().get(0);
 
-        String createNewTableQuery = "CREATE TABLE " + referenceSource + "Copy (LIKE " + referenceSource + ");";
+        String createNewTableQuery = "CREATE TABLE " + referenceSource + "_copy (LIKE " + referenceSource + ");";
 
         try (Connection etl = dataSource.getConnection()) {
             Statement etlStatement = etl.createStatement();
             etlStatement.executeUpdate(createNewTableQuery);
-            ResultSet columns = etlStatement.executeQuery("SELECT * FROM " + referenceSource + "Copy WHERE 1 = 0;");
+            ResultSet columns = etlStatement.executeQuery("SELECT * FROM " + referenceSource + "_copy WHERE 1 = 0;");
 
             String transferQuery = transferQuery(etl, etlStatement, referenceSource, columns, sorter);
             etlStatement.executeUpdate(transferQuery);
 
             etlStatement.executeUpdate("DROP TABLE " + referenceSource);
-            etlStatement.executeUpdate("ALTER TABLE " + referenceSource + "Copy RENAME TO " + referenceSource + ";");
+            etlStatement.executeUpdate("ALTER TABLE " + referenceSource + "_copy RENAME TO " + referenceSource + ";");
 
             response = new TransformationResponse(workflowId,
                     workflowName,
@@ -96,7 +96,7 @@ public class SorterServiceImplementation implements SorterService {
     }
 
     private String transferQuery(Connection connection, Statement statement, String tableName, ResultSet columnsResultSet, Transformation sorter) throws SQLException {
-        StringBuilder insert = new StringBuilder("INSERT INTO " + tableName + "Copy (");
+        StringBuilder insert = new StringBuilder("INSERT INTO " + tableName + "_copy (");
         StringBuilder select = new StringBuilder("SELECT ");
         ResultSetMetaData columnsMetadata = columnsResultSet.getMetaData();
         int numberOfColumns = columnsMetadata.getColumnCount();
@@ -127,13 +127,19 @@ public class SorterServiceImplementation implements SorterService {
     }
 
     private void fixPrimaryKey(Statement statement, String tableName, String primaryKey) throws SQLException {
-        String createSequence = "CREATE SEQUENCE increment_seq START 1 INCREMENT 1;";
+        // Use this one for cases where tables are dropped!
+        // String checkIfSequenceExists = "DROP SEQUENCE IF EXISTS increment_seq";
+        // statement.executeQuery(checkIfSequenceExists);
+
+        String newIncrementSequence = tableName + "_increment_sequence";
+
+        String createSequence = "CREATE SEQUENCE " + newIncrementSequence + " START 1 INCREMENT 1;";
         statement.executeUpdate(createSequence);
 
-        String alterSequence = "ALTER TABLE " + tableName + "Copy ALTER COLUMN " + primaryKey + " SET DEFAULT nextval('increment_seq');";
+        String alterSequence = "ALTER TABLE " + tableName + "_copy ALTER COLUMN " + primaryKey + " SET DEFAULT nextval('" + newIncrementSequence + "');";
         statement.executeUpdate(alterSequence);
 
-        String alterTableQuery = "ALTER TABLE " + tableName + "Copy ADD CONSTRAINT " + tableName + "Copy_pkey PRIMARY KEY (" + primaryKey + ");";
+        String alterTableQuery = "ALTER TABLE " + tableName + "_copy ADD CONSTRAINT " + tableName + "_copy_pkey PRIMARY KEY (" + primaryKey + ");";
         statement.executeUpdate(alterTableQuery);
     }
 

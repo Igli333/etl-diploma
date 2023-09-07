@@ -10,6 +10,7 @@ import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.kafka.common.metrics.Stat;
 import org.apache.logging.log4j.Level;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
+import javax.sql.DataSource;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -29,6 +32,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
     private final WorkflowRepository workflowRepository;
     private final ModelMapper modelMapper;
+    private final DataSource dataSource;
     private final KafkaTemplate<String, TransformationRequest> kafkaTemplate;
     private final Sinks.Many<TransformationResponse> messageSink = Sinks.many().replay().latest();
     private final Map<String, Queue<Transformation>> executingWorkflows = new ConcurrentHashMap<>();
@@ -50,14 +54,15 @@ public class WorkflowServiceImplementation implements WorkflowService {
             Queue<Transformation> transformationsQueue = transformations.stream()
                     .filter(transformation -> {
                         Map<String, Object> parameters = transformation.parameters();
-                        boolean hasMergeForward = parameters.containsKey("sourceToMerge");
+                        boolean hasMergeForward = parameters.containsKey("secondarySources");
                         return parameters.get("source").equals(source.name()) ||
-                                (hasMergeForward && parameters.get("sourceToMerge").equals(source.name()));
+                                (hasMergeForward && ((List<Map<String, Object>>) parameters.get("secondarySources"))
+                                        .stream().anyMatch(ref -> ref.get("name").equals(source.name())));
                     })
                     .collect(Collectors.toCollection(LinkedList::new));
 
             executingWorkflows.put(workflowSourceCompositeKey, transformationsQueue);
-            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, workflow.getWorkflowName(), source.name(), ""));
+            sendMessage(Transformations.EXTRACTOR, new TransformationRequest(workflowId, workflow.getWorkflowName(), source.name(), "", 1));
         });
 
         List<Transformation> compositeTransformations = transformations.stream().filter(transformation ->
@@ -98,9 +103,13 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
             if (!transformationQueue.isEmpty()) {
                 Transformation nextTransformation = transformationQueue.poll();
-                sendMessage(nextTransformation.type(), new TransformationRequest(workflowId, workflowName, referenceSource, nextTransformation.name()));
+                int size = 1;
+                if (nextTransformation.parameters().containsKey("secondarySources")) {
+                    size = ((List<String>) nextTransformation.parameters().get("secondarySources")).size() + 1;
+                }
+                sendMessage(nextTransformation.type(), new TransformationRequest(workflowId, workflowName, referenceSource, nextTransformation.name(), size));
             } else {
-                sendMessage(Transformations.LOADER, new TransformationRequest(workflowId, workflowName, referenceSource, ""));
+                sendMessage(Transformations.LOADER, new TransformationRequest(workflowId, workflowName, referenceSource, "", 1));
             }
         } else {
             messageSink.tryEmitNext(new TransformationResponse(workflowId,
@@ -123,11 +132,10 @@ public class WorkflowServiceImplementation implements WorkflowService {
                     } else {
                         return message.message();
                     }
-                }).doAfterTerminate(() -> executingWorkflows.keySet().forEach(key -> {
-                    if (key.startsWith(workflowId)) {
-                        executingWorkflows.remove(key);
-                    }
-                }));
+                }).doFinally((signalType) -> {
+                    log.log(Level.INFO, "Workflow Status: " + signalType);
+                    clearWorkflowFromRuntime(workflowId);
+                });
     }
 
     private Workflow dtoToEntity(WorkflowDto workflowDto) {
@@ -139,5 +147,31 @@ public class WorkflowServiceImplementation implements WorkflowService {
         kafkaTemplate.send(topic.name(), transformationRequest);
     }
 
+    private void clearWorkflowFromRuntime(String workflowId) {
+        Set<String> keys = executingWorkflows.keySet();
+        try (Connection etl = dataSource.getConnection()) {
+            Statement etlStatement = etl.createStatement();
+            DatabaseMetaData metadata = etl.getMetaData();
 
+            for (String key : keys) {
+                if (key.startsWith(workflowId)) {
+                    String tableName = key.substring(key.indexOf('-') + 1, key.length());
+                    executingWorkflows.remove(key);
+
+                    ResultSet tables = metadata.getTables(null,
+                            null,
+                            tableName + "%",
+                            new String[]{"TABLE"});
+
+                    while (!tables.isClosed() && tables.next()) {
+                        etlStatement.executeUpdate("DROP TABLE " + tables.getString("table_name") + ";");
+                    }
+
+                    etlStatement.executeUpdate("DROP SEQUENCE IF EXISTS " + tableName + "_increment_sequence;");
+                }
+            }
+        } catch (SQLException e) {
+            log.log(Level.ERROR, e);
+        }
+    }
 }
