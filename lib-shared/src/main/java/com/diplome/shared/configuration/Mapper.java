@@ -1,11 +1,9 @@
 package com.diplome.shared.configuration;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -27,13 +25,4 @@ public class Mapper {
     public <D, E> List<D> map(List<E> entities, Class<D> dClass) {
         return entities.stream().map(entity -> modelMapper.map(entity, dClass)).collect(Collectors.toList());
     }
-
-    public <D, E> Set<D> map(Set<E> entities, Class<D> dClass) {
-        return entities.stream().map(entity -> modelMapper.map(entity, dClass)).collect(Collectors.toSet());
-    }
-
-    public <D, E> Page<D> map(Page<E> entities, Class<D> dClass) {
-        return entities.map(entity -> modelMapper.map(entity, dClass));
-    }
-
 }

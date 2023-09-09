@@ -55,8 +55,11 @@ public class WorkflowServiceImplementation implements WorkflowService {
                     .filter(transformation -> {
                         Map<String, Object> parameters = transformation.parameters();
                         boolean hasMergeForward = parameters.containsKey("secondarySources");
+                        boolean hasJoinForward = parameters.containsKey("joinSources");
                         return parameters.get("source").equals(source.name()) ||
                                 (hasMergeForward && ((List<Map<String, Object>>) parameters.get("secondarySources"))
+                                        .stream().anyMatch(ref -> ref.get("name").equals(source.name()))) ||
+                                (hasJoinForward && ((List<Map<String, Object>>) parameters.get("joinSources"))
                                         .stream().anyMatch(ref -> ref.get("name").equals(source.name())));
                     })
                     .collect(Collectors.toCollection(LinkedList::new));

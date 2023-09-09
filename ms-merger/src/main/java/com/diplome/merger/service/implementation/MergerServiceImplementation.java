@@ -89,7 +89,6 @@ public class MergerServiceImplementation implements MergerService {
                     String.format(responseString, "finished successfully!"),
                     null,
                     refSources);
-
         } catch (SQLException e) {
             log.log(Level.ERROR, e);
             response = new TransformationResponse(workflowId,
