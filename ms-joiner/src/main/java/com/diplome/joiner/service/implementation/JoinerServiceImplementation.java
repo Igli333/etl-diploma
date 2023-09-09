@@ -10,6 +10,8 @@ import com.diplome.shared.entities.Workflow;
 import com.diplome.shared.enums.Transformations;
 import com.diplome.shared.repositories.WorkflowRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.Level;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,7 @@ import java.sql.*;
 import java.util.*;
 
 @Service
+@Log4j2
 @RequiredArgsConstructor
 public class JoinerServiceImplementation implements JoinerService {
 
@@ -69,7 +72,7 @@ public class JoinerServiceImplementation implements JoinerService {
             List<String> columns = joinSources.stream().flatMap(src -> src.getColumns().stream()).toList();
             columns.forEach(cln -> insertJoinIntoTable.append(cln).append(", "));
 
-            insertJoinIntoTable.delete(insertJoinIntoTable.length() - 2, insertJoinIntoTable.length()).append("( ");
+            insertJoinIntoTable.delete(insertJoinIntoTable.length() - 2, insertJoinIntoTable.length()).append(") ");
             insertJoinIntoTable.append(joinQuery);
 
             etlStatement.executeUpdate(insertJoinIntoTable.toString());
@@ -83,10 +86,11 @@ public class JoinerServiceImplementation implements JoinerService {
                     null,
                     joinSources.stream().map(JoinSource::getName).toList());
         } catch (SQLException e) {
+            log.log(Level.ERROR, e);
             response = new TransformationResponse(workflowId,
                     workflowName,
                     Transformations.SORTER.name(),
-                    String.format(responseString, "failed. Workflow doesn't exist!"),
+                    String.format(responseString, "failed."),
                     null,
                     null);
 
@@ -97,17 +101,17 @@ public class JoinerServiceImplementation implements JoinerService {
 
     private void renameColumns(Statement etlStatement, Map<String, String> finalStructure, String tableName) throws SQLException {
         ResultSet existingTable = etlStatement.executeQuery("SELECT * FROM " + tableName + " WHERE 1 = 0;");
-        StringBuilder alterColumnsNames = new StringBuilder("ALTER TABLE " + tableName + " RENAME COLUMN ");
 
         Set<String> existingColumnsKeys = finalStructure.keySet();
         existingTable.next();
 
         for (String key : existingColumnsKeys) {
-            alterColumnsNames.append(key).append(" TO ").append(finalStructure.get(key)).append(", ");
+            String value  = finalStructure.get(key);
+            if (!Objects.equals(key, value)){
+                String alterColumnsName = "ALTER TABLE " + tableName + " RENAME COLUMN " + key + " TO " + value + ";";
+                etlStatement.executeUpdate(alterColumnsName);
+            }
         }
-
-        alterColumnsNames.delete(alterColumnsNames.length() - 2, alterColumnsNames.length()).append(";");
-        etlStatement.executeUpdate(alterColumnsNames.toString());
     }
 
     private String getJoinData(Statement etlStatement, List<JoinSource> sources, List<Map<String, String>> conditions, String tableName) throws SQLException {
@@ -124,7 +128,7 @@ public class JoinerServiceImplementation implements JoinerService {
             }
 
             if (i == 0) {
-                joinQuery.append(sourceName).append(" ");
+                joinQuery.append(sourceName).append("");
             } else {
                 JoinSource previousSource = sources.get(i - 1);
                 String previousSourceName = previousSource.getName();
@@ -170,7 +174,8 @@ public class JoinerServiceImplementation implements JoinerService {
             if (!columnDataType.equals("serial") &&
                     !columnDataType.equals("bytea") &&
                     !columnDataType.equals("text") &&
-                    !columnDataType.equals("json")) {
+                    !columnDataType.equals("json") &&
+                    !columnDataType.equals("date")) {
                 columnDataType += "(" + precision;
                 if (scale != 0) {
                     columnDataType += ", " + scale;

@@ -114,7 +114,8 @@ public class ExtractorServiceImplementation implements ExtractorService {
             if (!columnDataType.equals("serial") &&
                     !columnDataType.equals("bytea") &&
                     !columnDataType.equals("text") &&
-                    !columnDataType.equals("json")) {
+                    !columnDataType.equals("json") &&
+                    !columnDataType.equals("date")) {
                 columnDataType += "(" + precision;
                 if (scale != 0) {
                     columnDataType += ", " + scale;
