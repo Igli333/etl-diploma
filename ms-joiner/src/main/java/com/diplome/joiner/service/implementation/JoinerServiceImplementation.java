@@ -106,8 +106,8 @@ public class JoinerServiceImplementation implements JoinerService {
         existingTable.next();
 
         for (String key : existingColumnsKeys) {
-            String value  = finalStructure.get(key);
-            if (!Objects.equals(key, value)){
+            String value = finalStructure.get(key);
+            if (!Objects.equals(key, value)) {
                 String alterColumnsName = "ALTER TABLE " + tableName + " RENAME COLUMN " + key + " TO " + value + ";";
                 etlStatement.executeUpdate(alterColumnsName);
             }

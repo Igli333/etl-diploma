@@ -74,16 +74,24 @@ public class WorkflowServiceImplementation implements WorkflowService {
 
     @Override
     public void endOfTransformation(TransformationResponse transformationResponse) {
-        messageSink.tryEmitNext(transformationResponse);
+        String workflowId = transformationResponse.workflowId();
+        String workflowName = transformationResponse.workflowName();
 
         if (transformationResponse.error() != null) {
+            messageSink.tryEmitNext(transformationResponse);
+            messageSink.tryEmitNext(new TransformationResponse(workflowId,
+                    transformationResponse.workflowName(),
+                    "WORKFLOW",
+                    null,
+                    "Workflow with name: " + workflowName + " has failed!",
+                    null));
             return;
         }
 
-        String workflowId = transformationResponse.workflowId();
-        String workflowName = transformationResponse.workflowName();
+        messageSink.tryEmitNext(transformationResponse);
+
         try {
-            if (!transformationResponse.message().equals("Loader for workflow: " + workflowId + " finished")) {
+            if (!transformationResponse.message().contains("Loader")) {
                 String referenceSource = transformationResponse.sources().get(0);
 
                 if (transformationResponse.sources().size() > 1) {
@@ -129,7 +137,7 @@ public class WorkflowServiceImplementation implements WorkflowService {
     private Flux<String> getUpdatesFromWorkflow(String workflowId) {
         return messageSink.asFlux()
                 .filter(message -> Objects.equals(message.workflowId(), workflowId))
-                .takeUntil(message -> message.error() != null || message.finishedTransformationName().equals("WORKFLOW"))
+                .takeUntil(message -> message.finishedTransformationName().equals("WORKFLOW"))
                 .map(message -> {
                     if (message.error() != null) {
                         return message.error();
